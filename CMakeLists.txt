@@ -13,10 +13,6 @@ set(CMAKE_C_STANDARD_REQUIRED True)
 
 # Sources
 
-set ( EXTERNAL
-  src/external/stb_image.h
-)
-
 set ( SOURCE_ONE_WEEKEND
   src/InOneWeekend/main.c
 #   src/InOneWeekend/camera.h

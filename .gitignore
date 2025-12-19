@@ -4,3 +4,6 @@ build/
 
 #From CMake docs (note this is different than CMakePresets.json):
 CMakeUserPresets.json
+
+bookmark.md
+image.ppm
