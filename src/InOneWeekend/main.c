@@ -24,6 +24,9 @@ int main()
 
     for (int i = 0; i < image_height; i++)
     {
+        fprintf(stderr, "\rLines scanned: %i out of %i", i+1, image_height);
+        fflush(stderr);
+
         for (int j = 0; j < image_width; j++)
         {
             double r = (double) j / (image_width - 1);
@@ -43,6 +46,9 @@ int main()
             printf("%i %i %i\n", ir, ig, ib);
         }
     }
+
+    fprintf(stderr, "\nRender done!");
+
 
     return 0;
 }
