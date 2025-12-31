@@ -1,5 +1,8 @@
 #include <stdio.h>
 
+#include "color.h"
+#include "vec3.h"
+
 int main()
 {
 
@@ -20,35 +23,29 @@ int main()
 
     printf("P3\n");                               // This means the colors will be in ASCII
     printf("%i %i\n", image_width, image_height); // how many pixels to make
-    printf("255\n");                               // Max color possible
+    printf("255\n");                              // Max color possible
 
     for (int i = 0; i < image_height; i++)
     {
-        fprintf(stderr, "\rLines scanned: %i out of %i", i+1, image_height);
+        fprintf(stderr, "\rLines scanned: %i out of %i", i + 1, image_height);
         fflush(stderr);
 
         for (int j = 0; j < image_width; j++)
         {
-            double r = (double) j / (image_width - 1);
-            double g = (double) i/ (image_height - 1);
-            double b = 0.0;
+            color3 color = {(double)j / (image_width - 1), (double)i / (image_height - 1), 0.0};
 
             /*
                 By convention, each of the red/green/blue components are represented internally
                 by real-valued variables that range from 0.0 to 1.0.
-                These must be scaled to integer values between 0 and 255 before we print them out.
+                These must be scaled to integer values between 0 and 255 before we print them out
+                (this happens in the write_color function).
             */
 
-            int ir = (int) 255.999 * r;
-            int ig = (int) 255.999 * g;
-            int ib = (int) 255.999 * b;
-
-            printf("%i %i %i\n", ir, ig, ib);
+            write_color(color);
         }
     }
 
     fprintf(stderr, "\nRender done!");
-
 
     return 0;
 }

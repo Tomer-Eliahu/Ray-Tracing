@@ -32,4 +32,4 @@ include_directories(src)
 
 # Executables
 
-add_executable(inOneWeekend      ${EXTERNAL} ${SOURCE_ONE_WEEKEND})
+add_executable(inOneWeekend      ${SOURCE_ONE_WEEKEND})
