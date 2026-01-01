@@ -4,9 +4,34 @@
 #include "vec3.h"
 #include "ray.h"
 
+///@brief Find out if the given ray hits this sphere
+///@param center the center of the sphere
+int hit_sphere(const point3 center, double radius, const struct Ray *ray)
+{
+
+    // As the book explains, this boils down to finding out how many solutions a quadratic equation has.
+    vec3 diff;
+    subtract(diff, (double *)center, (double *)ray->origin);
+
+    double a = dot(ray->direction, ray->direction);
+    double b = -2.0 * dot(ray->direction, diff);
+    double c = dot(diff, diff) - radius * radius;
+    double discriminant = b * b - 4 * a * c;
+
+    return (discriminant >= 0);
+}
+
 ///@brief sets the color for a given scene ray
 void ray_color(color3 color, const struct Ray *ray)
 {
+    if (hit_sphere((point3){0, 0, -1}, 0.5, ray))
+    {
+        color[0] = 1; // R
+        color[1] = 0; // G
+        color[2] = 0; // B
+        return;
+    }
+
     vec3 unit_dir;
 
     // We know that this use won't actually modify ray->direction
@@ -75,8 +100,8 @@ int main()
     printf("P3\n");                               // This means the colors will be in ASCII
     printf("%i %i\n", image_width, image_height); // how many pixels to make
     printf("255\n");                              // Max color possible
-    
-    //The book does this (j then i). So we follow that.
+
+    // The book does this (j then i). So we follow that.
     for (int j = 0; j < image_height; j++)
     {
         fprintf(stderr, "\rLines scanned: %i out of %i", j + 1, image_height);
