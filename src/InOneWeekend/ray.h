@@ -12,7 +12,6 @@
 
 #include "vec3.h"
 
-
 /**
  *  @struct Ray
  *  @brief A ray consists of an 3D origin point and a direction.
@@ -25,12 +24,15 @@ struct Ray
 };
 
 /// @brief Computes dest: the point the ray will be at t (P(t)= Origin+t* Direction).
-void at(vec3 dest, struct Ray *ray, double t)
+double *ray_at(vec3 dest, const struct Ray *ray, double t)
 {
     for (int i = 0; i < 3; i++)
     {
         dest[i] = ray->origin[i] + ray->direction[i] * t;
     }
+
+    // for ergonomics
+    return dest;
 }
 
 /*
@@ -48,9 +50,9 @@ The camera will be placed some distance orthogonally behind a digital viewport
 (you can think of this viewport as a window through which we view the image; like standing
 at the window in your house, you view a 3D image through a 2D object).
 
-For simplicity we'll start with the camera center at (0,0,0). 
-We'll also have the y-axis go up, the x-axis to the right, and the negative z-axis 
-pointing in the viewing direction. 
+For simplicity we'll start with the camera center at (0,0,0).
+We'll also have the y-axis go up, the x-axis to the right, and the negative z-axis
+pointing in the viewing direction.
 (This is commonly referred to as right-handed coordinates.)
 
 See section 4.2 for more details.

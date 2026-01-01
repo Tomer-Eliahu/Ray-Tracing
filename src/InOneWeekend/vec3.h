@@ -15,7 +15,7 @@ typedef vec3 color3;
 
 /// @brief Negate a vector (multiply each coordinate by -1).
 /// @remark Note that ret can potentially be equal to vec (this would mean we modify vec in place).
-double* negate(vec3 ret, vec3 vec)
+double *negate(vec3 ret, vec3 vec)
 {
     for (int i = 0; i < 3; i++)
     {
@@ -26,7 +26,7 @@ double* negate(vec3 ret, vec3 vec)
 }
 
 /// @brief Add vec2 to vec1.
-double* add(vec3 ret, vec3 vec1, vec3 vec2)
+double *add(vec3 ret, vec3 vec1, vec3 vec2)
 {
     for (int i = 0; i < 3; i++)
     {
@@ -36,7 +36,7 @@ double* add(vec3 ret, vec3 vec1, vec3 vec2)
 }
 
 /// @brief Subtract vec2 from vec1.
-double* subtract(vec3 ret, vec3 vec1, vec3 vec2)
+double *subtract(vec3 ret, vec3 vec1, vec3 vec2)
 {
     for (int i = 0; i < 3; i++)
     {
@@ -48,7 +48,7 @@ double* subtract(vec3 ret, vec3 vec1, vec3 vec2)
 
 /// @brief Scale vec by a scalar t.
 /// @remark Note that ret can potentially be equal to vec (this would mean we modify vec in place).
-double* scale(vec3 ret, vec3 vec, double t)
+double *scale(vec3 ret, vec3 vec, double t)
 {
     for (int i = 0; i < 3; i++)
     {
@@ -59,7 +59,7 @@ double* scale(vec3 ret, vec3 vec, double t)
 }
 
 /// @brief Multiply vec1 by vec2 element wise.
-double* multiply(vec3 ret, vec3 vec1, vec3 vec2)
+double *multiply(vec3 ret, vec3 vec1, vec3 vec2)
 {
     for (int i = 0; i < 3; i++)
     {
@@ -89,7 +89,7 @@ static inline void print(const vec3 vec)
 
 /// @brief Get a unit vector in vec's direction.
 /// @remark Note that ret can potentially be equal to vec (this would mean we modify vec in place).
-double* unit(vec3 ret, vec3 vec)
+double *unit(vec3 ret, vec3 vec)
 {
     double magnitude = len(vec);
     for (int i = 0; i < 3; i++)
@@ -106,8 +106,8 @@ static inline double dot(const vec3 u, const vec3 v)
 }
 
 /// @brief The cross product of two vec3.
-double* cross(vec3 ret, vec3 vec1, vec3 vec2)
-{   
+double *cross(vec3 ret, vec3 vec1, vec3 vec2)
+{
     ret[0] = vec1[1] * vec2[2] - vec1[2] * vec2[1];
     ret[1] = vec1[2] * vec2[0] - vec1[0] * vec2[2];
     ret[2] = vec1[0] * vec2[1] - vec1[1] * vec2[0];

@@ -1,34 +1,59 @@
-#include <stdio.h>
+#include "rtweekend.h"
 
-#include "color.h"
-#include "vec3.h"
-#include "ray.h"
+#include "hittable.h"
+#include "hittable_list.h"
+#include "sphere.h"
 
-///@brief Find out if the given ray hits this sphere
-///@param center the center of the sphere
-int hit_sphere(const point3 center, double radius, const struct Ray *ray)
+#define WORLD_LENGTH 2 // How many hittable objects there are in the world.
+
+/// @brief returns if any objects in the world are hit by the ray
+/// @param world an array of hittable objects
+/// @param ray
+/// @param ray_interval
+/// @param rec the Hit Record-- updated accordingly
+/// @return
+bool world_hit(const struct Hittable *world, int world_length, const struct Ray *ray,
+               struct Interval ray_interval, struct Hit_Record *rec)
 {
 
-    // As the book explains, this boils down to finding out how many solutions a quadratic equation has.
-    vec3 diff;
-    subtract(diff, (double *)center, (double *)ray->origin);
+    struct Hit_Record temp_rec;
+    bool hit_anything = false;
+    double closest_so_far = ray_interval.max;
 
-    double a = dot(ray->direction, ray->direction);
-    double b = -2.0 * dot(ray->direction, diff);
-    double c = dot(diff, diff) - radius * radius;
-    double discriminant = b * b - 4 * a * c;
+    for (int i = 0; i < world_length; i++)
+    {
+        // find out which Hittable object this is
+        switch (world[i].which)
+        {
+        case (enum Which_Hittable)Sphere:
+            if (sphere_hit(&world[i].object.sphere, ray,
+                           (struct Interval){.min = ray_interval.min, .max = closest_so_far}, &temp_rec))
+            {
+                hit_anything = true;
+                closest_so_far = rec->t;
+                // set rec to temp_rec
+                *rec = temp_rec;
+            }
+            break;
 
-    return (discriminant >= 0);
+        default:
+            fprintf(stderr, "Could not identify Hittable!\n");
+            fflush(stderr);
+            break;
+        }
+    }
+
+    return hit_anything;
 }
 
 ///@brief sets the color for a given scene ray
-void ray_color(color3 color, const struct Ray *ray)
+void ray_color(color3 color, const struct Ray *ray, const struct Hittable *world, int world_length)
 {
-    if (hit_sphere((point3){0, 0, -1}, 0.5, ray))
+    struct Hit_Record rec;
+
+    if (world_hit(world, world_length, ray, (struct Interval){.min = 0, .max = infinity}, &rec))
     {
-        color[0] = 1; // R
-        color[1] = 0; // G
-        color[2] = 0; // B
+        scale(color, add(color, rec.normal, (color3){1, 1, 1}), 0.5);
         return;
     }
 
@@ -65,6 +90,12 @@ int main()
 
     int image_height = (int)image_width / aspect_ratio;
     image_height = (image_height < 1) ? 1 : image_height;
+
+    // World
+    struct Hittable world[WORLD_LENGTH] = {
+        {.which = (enum Which_Hittable)Sphere, .object.sphere = {.center = {0, 0, -1}, .radius = 0.5}},
+        {.which = (enum Which_Hittable)Sphere, .object.sphere = {.center = {0, -100.5, -1}, .radius = 100}},
+    };
 
     // Camera
 
@@ -124,7 +155,7 @@ int main()
             memcpy(r.direction, ray_dir, 3 * sizeof(double));
 
             color3 pixel_color;
-            ray_color(pixel_color, &r);
+            ray_color(pixel_color, &r, world, WORLD_LENGTH);
 
             /*
                 By convention, each of the red/green/blue components are represented internally
