@@ -69,7 +69,7 @@ double *multiply(vec3 ret, vec3 vec1, vec3 vec2)
     return ret;
 }
 
-/// @brief Returns the length of a vec3.
+/// @brief Returns the length (also called the magnitude) of a vec3.
 static inline double len(const vec3 vec)
 {
     return sqrt((vec[0] * vec[0] + vec[1] * vec[1] + vec[2] * vec[2]));
@@ -89,6 +89,7 @@ static inline void print(const vec3 vec)
 
 /// @brief Get a unit vector in vec's direction.
 /// @remark Note that ret can potentially be equal to vec (this would mean we modify vec in place).
+/// @remark Assumes vec is not a zero vector (so it has a magnitude different than 0).
 double *unit(vec3 ret, vec3 vec)
 {
     double magnitude = len(vec);

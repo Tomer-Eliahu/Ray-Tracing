@@ -4,8 +4,10 @@
 #include "vec3.h"
 #include "sphere.h"
 
-/// @brief An enum of all possible hittable objects (we can then have an array of this type for a list
-/// of hittalbe objects).
+/// @brief An enum of all possible hittable objects (we can then have an array of the type [Hittable]
+/// for a list of hittalbe objects).
+///
+/// [Hittable]: https://github.com/Tomer-Eliahu/Ray-Tracing/blob/main/src/InOneWeekend/hittable_list.h
 enum Which_Hittable
 {
     Sphere

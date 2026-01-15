@@ -3,9 +3,9 @@
 /*
     The one thing that all ray tracers have is a ray abstraction
     and a computation of what color is seen along a ray.
-    Let’s think of a ray as a function P(t)=A+tb.
+    Let’s think of a ray as a function P(t)=A+tB.
     Here P is a 3D position along a line in 3D.
-    A is the ray origin and b is the ray direction.
+    A is the ray origin and B is the ray direction.
     The ray parameter t is a real number (double in the code).
 
 */
@@ -48,7 +48,7 @@ The involved steps are:
 Lets do a simple camera for getting the code up and running.
 The camera will be placed some distance orthogonally behind a digital viewport
 (you can think of this viewport as a window through which we view the image; like standing
-at the window in your house, you view a 3D image through a 2D object).
+at the window in your house, you view a 3D world through a 2D object).
 
 For simplicity we'll start with the camera center at (0,0,0).
 We'll also have the y-axis go up, the x-axis to the right, and the negative z-axis

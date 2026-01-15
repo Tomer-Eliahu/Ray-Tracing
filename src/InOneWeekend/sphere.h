@@ -26,7 +26,7 @@ void sphere_set_face_normal(const struct Ray *ray,
     rec->front_face ? memcpy(rec->normal, outward_normal, 3 * sizeof(double)) : negate(rec->normal, (double *)outward_normal);
 }
 
-/// @brief dedect if the ray hits the sphere
+/// @brief detect if the ray hits the sphere
 /// @param ray
 /// @param ray_interval
 /// @param rec the Hit_Record
@@ -64,7 +64,7 @@ bool sphere_hit(const struct Sphere *sphere, const struct Ray *ray, struct Inter
     ray_at(rec->p, ray, rec->t);
 
     // Note that for the normal for a sphere: we can make it into a unit vector by dividing by the sphere radius.
-    // This is because the radius is exactly the magnitude this vector (rec.p - center).
+    // This is because the radius is exactly the magnitude of this vector (rec.p - center).
     vec3 outward_normal;
     scale(outward_normal,
           subtract(rec->normal, rec->p, (double *)sphere->center), (1 / sphere->radius));
