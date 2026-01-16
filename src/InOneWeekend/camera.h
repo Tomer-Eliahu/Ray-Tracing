@@ -7,19 +7,21 @@
 
 struct Camera_Config
 {
-    double aspect_ratio; //< Ratio of image width over height
-    int image_width;     //< Rendered image width in pixel count
+    double aspect_ratio;   //< Ratio of image width over height
+    int image_width;       //< Rendered image width in pixel count
+    int samples_per_pixel; //< Count of random samples for each pixel
 };
 
 /// @brief Store derived camera information.
 /// This is not meant to be accessed or modified from outside this file.
 struct Camera_Info
 {
-    int image_height;   //< Rendered image height
-    point3 center;      //< Camera center
-    point3 pixel00_loc; //< Location of pixel 0, 0
-    vec3 pixel_delta_u; //< Offset to pixel to the right
-    vec3 pixel_delta_v; //< Offset to pixel below
+    int image_height;           //< Rendered image height
+    double pixel_samples_scale; // Color scale factor for a sum of pixel samples
+    point3 center;              //< Camera center
+    point3 pixel00_loc;         //< Location of pixel 0, 0
+    vec3 pixel_delta_u;         //< Offset to pixel to the right
+    vec3 pixel_delta_v;         //< Offset to pixel below
 };
 
 /// @brief returns if any objects in the world are hit by the ray
@@ -97,6 +99,8 @@ void camera_initialize(const struct Camera_Config *cfg, struct Camera_Info *cam_
     cam_info->image_height = (int)cfg->image_width / cfg->aspect_ratio;
     cam_info->image_height = (cam_info->image_height < 1) ? 1 : cam_info->image_height;
 
+    cam_info->pixel_samples_scale = 1.0 / cfg->samples_per_pixel;
+
     // Set the camera center to 0,0,0;
     memset(cam_info->center, 0, 3 * sizeof(double));
 
@@ -135,6 +139,37 @@ void camera_initialize(const struct Camera_Config *cfg, struct Camera_Info *cam_
               add(temp1, cam_info->pixel_delta_u, cam_info->pixel_delta_v), 0.5));
 }
 
+
+/// @brief Sets the vector to a random point in the [-.5,-.5]-[+.5,+.5] unit square.
+void sample_square(vec3 vec)
+{
+    vec[0] = random_zero_to_one() - 0.5;
+    vec[1] = random_zero_to_one() - 0.5;
+    vec[3] = 0;
+}
+
+/// @brief Construct a camera ray originating from the origin
+/// and directed at randomly sampled point around the pixel location i, j.
+void get_ray(struct Ray *ray, const struct Camera_Info *cam_info, int i, int j)
+{
+
+    // calculate the pixel sample location
+    point3 offset;
+    sample_square(offset);
+
+    point3 temp1, temp2;
+    point3 pixel_sample;
+    scale(temp1, (double*) cam_info->pixel_delta_u, (i + offset[0]));
+    scale(temp2, (double*) cam_info->pixel_delta_v, (j + offset[1]));
+    add(pixel_sample, (double*) cam_info->pixel00_loc, add(temp1, temp1, temp2));
+
+    // The ray origin is the camera center
+    memcpy(ray->origin, cam_info->center, 3 * sizeof(double));
+    subtract(ray->direction, pixel_sample, ray->origin);
+}
+
+
+
 /// @brief Render the image
 /// @param world a list of Hittable objects
 void camera_render(const struct Hittable *world, const int world_length, const struct Camera_Config *cfg)
@@ -144,9 +179,9 @@ void camera_render(const struct Hittable *world, const int world_length, const s
     camera_initialize(cfg, &cam_info);
     // Render
 
-    printf("P3\n");                                                   // This means the colors will be in ASCII
+    printf("P3\n");                                             // This means the colors will be in ASCII
     printf("%i %i\n", cfg->image_width, cam_info.image_height); // how many pixels to make
-    printf("255\n");                                                  // Max color possible
+    printf("255\n");                                            // Max color possible
 
     // The book does this (j then i). So we follow that.
     for (int j = 0; j < cam_info.image_height; j++)
@@ -156,22 +191,23 @@ void camera_render(const struct Hittable *world, const int world_length, const s
 
         for (int i = 0; i < cfg->image_width; i++)
         {
-            point3 pixel_center, temp1, temp2;
-
-            // calculate the pixel location
-            scale(temp1, cam_info.pixel_delta_u, i);
-            scale(temp2, cam_info.pixel_delta_v, j);
-            add(pixel_center, cam_info.pixel00_loc, add(temp1, temp1, temp2));
-
-            vec3 ray_dir;
-            subtract(ray_dir, pixel_center, cam_info.center);
-
+            color3 pixel_color = {0};
             struct Ray r;
-            memcpy(r.origin, cam_info.center, 3 * sizeof(double));
-            memcpy(r.direction, ray_dir, 3 * sizeof(double));
 
-            color3 pixel_color;
-            ray_color(pixel_color, &r, world, world_length);
+            /*
+                For a single pixel composed of multiple samples,
+                we'll select samples from the area surrounding the pixel
+                and average the resulting light (color) values together. We do this to accomplish antialiasing
+                (smoothing out edges). Remember a pixel is really a point sample.
+            */
+            for (int sample = 0; sample < cfg->samples_per_pixel; sample++)
+            {
+                get_ray(&r, &cam_info, i, j);
+
+                color3 temp;
+                ray_color(temp, &r, world, world_length);
+                add(pixel_color, pixel_color, temp);
+            }
 
             /*
                 By convention, each of the red/green/blue components are represented internally
@@ -179,7 +215,7 @@ void camera_render(const struct Hittable *world, const int world_length, const s
                 These must be scaled to integer values between 0 and 255 before we print them out
                 (this happens in the write_color function).
             */
-
+            scale(pixel_color, pixel_color, cam_info.pixel_samples_scale);
             write_color(pixel_color);
         }
     }
