@@ -4,11 +4,13 @@
 #include "hittable_list.h"
 #include "vec3.h"
 #include "ray.h"
+#include "material.h"
 
 struct Sphere
 {
     point3 center;
-    double radius; //< Must be 0<=
+    double radius;                      //< Must be 0<=
+    const struct Material_Cfg *mat_cfg; //< The material config for the material the sphere is made from.
 };
 
 /// @brief Sets the hit record normal vector.
@@ -70,6 +72,9 @@ bool sphere_hit(const struct Sphere *sphere, const struct Ray *ray, struct Inter
           subtract(rec->normal, rec->p, (double *)sphere->center), (1 / sphere->radius));
 
     sphere_set_face_normal(ray, outward_normal, rec);
+
+    // Copy a pointer to the Material_Cfg this Sphere has. We won't use the hit record to change the material.
+    rec->mat_cfg = (struct Material_Cfg *)sphere->mat_cfg;
 
     return true;
 }

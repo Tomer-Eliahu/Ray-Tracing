@@ -4,6 +4,7 @@
 #include "hittable_list.h"
 #include "sphere.h"
 #include "rtweekend.h"
+#include "material.h"
 
 struct Camera_Config
 {
@@ -49,7 +50,7 @@ bool world_hit(const struct Hittable *world, int world_length, const struct Ray 
                            (struct Interval){.min = ray_interval.min, .max = closest_so_far}, &temp_rec))
             {
                 hit_anything = true;
-                closest_so_far = rec->t;
+                closest_so_far = temp_rec.t;
                 // set rec to temp_rec
                 *rec = temp_rec;
             }
@@ -82,16 +83,50 @@ void ray_color(color3 color, const struct Ray *ray, int depth, const struct Hitt
     // Note that we are careful to set the min to 0.001 to get rid of shadow acne (see section 9.3).
     if (world_hit(world, world_length, ray, (struct Interval){.min = 0.001, .max = infinity}, &rec))
     {
-        // Random ray (according to Lambertian distribution) from the hit point
-        struct Ray rand_ray;
-        memcpy(rand_ray.origin, rec.p, 3 * sizeof(double));
-        random_unit_vector(rand_ray.direction);
-        // The direction is the vector (S−P) in Figure 14 in section 9.4
-        add(rand_ray.direction, rand_ray.direction, rec.normal);
 
-        ray_color(color, &rand_ray, depth - 1, world, world_length);
-        scale(color, color, 0.5);
-        return;
+        struct Ray scattered;
+        color3 attenuation;
+
+        switch (rec.mat_cfg->mat)
+        {
+        case (enum Material)Lambertian:
+            if (lambertian_scatter(ray, &rec, attenuation, &scattered))
+            {
+                ray_color(color, &scattered, depth - 1, world, world_length);
+                multiply(color, attenuation, color);
+                return;
+            }
+
+            // set to black
+            color[0] = 0;
+            color[1] = 0;
+            color[2] = 0;
+            return;
+
+            break;
+
+        case (enum Material)Metal:
+
+            if (metal_scatter(ray, &rec, attenuation, &scattered))
+            {
+                ray_color(color, &scattered, depth - 1, world, world_length);
+                multiply(color, attenuation, color);
+                return;
+            }
+
+            // set to black
+            color[0] = 0;
+            color[1] = 0;
+            color[2] = 0;
+            return;
+
+            break;
+
+        default:
+            fprintf(stderr, "Could not identify Material of object hit!\n");
+            fflush(stderr);
+            break;
+        }
     }
 
     vec3 unit_dir;

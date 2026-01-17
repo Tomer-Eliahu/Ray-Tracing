@@ -160,3 +160,16 @@ static inline void random_on_hemisphere(vec3 rand_vec, const vec3 normal)
         negate(rand_vec, rand_vec);
     }
 }
+
+/// @brief Reflect the vector vec (possibly in place) off a surface with the given surface normal.
+static inline double *reflect(vec3 ret, vec3 vec, const vec3 normal)
+{
+    return subtract(ret, vec, scale(ret, (double *)normal, 2 * dot(vec, normal)));
+}
+
+/// @brief Return true if the vector is close to zero in all dimensions.
+bool near_zero(const vec3 vec)
+{
+    double s = 1e-8;
+    return (fabs(vec[0]) < s) && (fabs(vec[1]) < s) && (fabs(vec[2]) < s);
+}
