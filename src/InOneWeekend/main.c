@@ -24,7 +24,8 @@ int main()
         {.which = (enum Which_Hittable)Sphere, .object.sphere = {.center = {0, -100.5, -1}, .radius = 100}},
     };
 
-    struct Camera_Config cam = {.aspect_ratio = 16.0 / 9.0, .image_width = 400, .samples_per_pixel = 100};
+    struct Camera_Config cam =
+        {.aspect_ratio = 16.0 / 9.0, .image_width = 400, .samples_per_pixel = 100, .max_depth = 50};
 
     camera_render(world, WORLD_LENGTH, &cam);
 

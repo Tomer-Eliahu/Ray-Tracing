@@ -10,6 +10,7 @@ struct Camera_Config
     double aspect_ratio;   //< Ratio of image width over height
     int image_width;       //< Rendered image width in pixel count
     int samples_per_pixel; //< Count of random samples for each pixel
+    int max_depth;         //< Maximum number of ray bounces into scene
 };
 
 /// @brief Store derived camera information.
@@ -65,13 +66,31 @@ bool world_hit(const struct Hittable *world, int world_length, const struct Ray 
 }
 
 ///@brief sets the color for a given scene ray
-void ray_color(color3 color, const struct Ray *ray, const struct Hittable *world, int world_length)
+void ray_color(color3 color, const struct Ray *ray, int depth, const struct Hittable *world, int world_length)
 {
+    // If we've exceeded the ray bounce limit, no more light is gathered.
+    if (depth <= 0)
+    {
+        color[0] = 0;
+        color[1] = 0;
+        color[2] = 0;
+        return;
+    }
+
     struct Hit_Record rec;
 
-    if (world_hit(world, world_length, ray, (struct Interval){.min = 0, .max = infinity}, &rec))
+    // Note that we are careful to set the min to 0.001 to get rid of shadow acne (see section 9.3).
+    if (world_hit(world, world_length, ray, (struct Interval){.min = 0.001, .max = infinity}, &rec))
     {
-        scale(color, add(color, rec.normal, (color3){1, 1, 1}), 0.5);
+        // Random ray (according to Lambertian distribution) from the hit point
+        struct Ray rand_ray;
+        memcpy(rand_ray.origin, rec.p, 3 * sizeof(double));
+        random_unit_vector(rand_ray.direction);
+        // The direction is the vector (S−P) in Figure 14 in section 9.4
+        add(rand_ray.direction, rand_ray.direction, rec.normal);
+
+        ray_color(color, &rand_ray, depth - 1, world, world_length);
+        scale(color, color, 0.5);
         return;
     }
 
@@ -139,7 +158,6 @@ void camera_initialize(const struct Camera_Config *cfg, struct Camera_Info *cam_
               add(temp1, cam_info->pixel_delta_u, cam_info->pixel_delta_v), 0.5));
 }
 
-
 /// @brief Sets the vector to a random point in the [-.5,-.5]-[+.5,+.5] unit square.
 void sample_square(vec3 vec)
 {
@@ -159,16 +177,14 @@ void get_ray(struct Ray *ray, const struct Camera_Info *cam_info, int i, int j)
 
     point3 temp1, temp2;
     point3 pixel_sample;
-    scale(temp1, (double*) cam_info->pixel_delta_u, (i + offset[0]));
-    scale(temp2, (double*) cam_info->pixel_delta_v, (j + offset[1]));
-    add(pixel_sample, (double*) cam_info->pixel00_loc, add(temp1, temp1, temp2));
+    scale(temp1, (double *)cam_info->pixel_delta_u, (i + offset[0]));
+    scale(temp2, (double *)cam_info->pixel_delta_v, (j + offset[1]));
+    add(pixel_sample, (double *)cam_info->pixel00_loc, add(temp1, temp1, temp2));
 
     // The ray origin is the camera center
     memcpy(ray->origin, cam_info->center, 3 * sizeof(double));
     subtract(ray->direction, pixel_sample, ray->origin);
 }
-
-
 
 /// @brief Render the image
 /// @param world a list of Hittable objects
@@ -205,7 +221,7 @@ void camera_render(const struct Hittable *world, const int world_length, const s
                 get_ray(&r, &cam_info, i, j);
 
                 color3 temp;
-                ray_color(temp, &r, world, world_length);
+                ray_color(temp, &r, cfg->max_depth, world, world_length);
                 add(pixel_color, pixel_color, temp);
             }
 

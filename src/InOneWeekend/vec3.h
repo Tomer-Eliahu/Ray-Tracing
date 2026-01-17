@@ -114,3 +114,49 @@ double *cross(vec3 ret, vec3 vec1, vec3 vec2)
     ret[2] = vec1[0] * vec2[1] - vec1[1] * vec2[0];
     return ret;
 }
+
+/// @brief Make a vector random in { [0,1), [0,1), [0,1) }.
+static inline void vec_rand_zero_to_one(vec3 vec)
+{
+    vec[0] = random_zero_to_one();
+    vec[1] = random_zero_to_one();
+    vec[2] = random_zero_to_one();
+}
+
+/// @brief Make a vector random in { [min,max), [min,max), [min,max) }.
+static inline void vec_rand_in_range(vec3 vec, double min, double max)
+{
+    vec[0] = random_in_range(min, max);
+    vec[1] = random_in_range(min, max);
+    vec[2] = random_in_range(min, max);
+}
+
+/// @brief Generate a random vector on the surface of the unit sphere.
+/// @remark Rejecting a random vector outside the unit sphere (rejection sampling)
+/// ensures a uniform distribution of sample directions on the surface of the unit sphere.
+static inline void random_unit_vector(vec3 vec)
+{
+    while (true)
+    {
+        vec_rand_in_range(vec, -1, 1);
+        double lensq = len_squared(vec);
+        if (1e-160 < lensq && lensq <= 1)
+        {
+            // Normalize the vector
+            scale(vec, vec, (1 / sqrt(lensq)));
+            return;
+        }
+    }
+}
+
+/// @brief Generate a random vector on the hemisphere (facing the same direction as the surface normal).
+/// @param normal
+static inline void random_on_hemisphere(vec3 rand_vec, const vec3 normal)
+{
+    random_unit_vector(rand_vec);
+
+    if (dot(rand_vec, normal) <= 0.0) // NOT in the same hemisphere as the normal
+    {
+        negate(rand_vec, rand_vec);
+    }
+}
