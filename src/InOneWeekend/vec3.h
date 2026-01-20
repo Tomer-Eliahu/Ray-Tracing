@@ -167,6 +167,32 @@ static inline double *reflect(vec3 ret, vec3 vec, const vec3 normal)
     return subtract(ret, vec, scale(ret, (double *)normal, 2 * dot(vec, normal)));
 }
 
+/// @brief Refract (different than reflect; see remark) a given vector.
+/// @param ret
+/// @param uv The incident (incoming) ray.
+/// @param normal
+/// @param etai_over_etat
+/// @return The refracted vector.
+/// @remark a reflected ray hits a surface and then “bounces” off in a new direction.
+/// A refracted ray bends as it transitions from a material's surroundings into the material itself
+/// (as with glass or water). See 11.2 for details behind this calculation.
+static inline double *refract(vec3 ret, const vec3 uv, const vec3 normal, double etai_over_etat)
+{
+    vec3 temp;
+    double cos_theta = fmin(dot(negate(temp, (double *)uv), normal), 1.0);
+
+    vec3 r_out_perp;
+    scale(r_out_perp,
+          add(r_out_perp, (double *)uv,
+              scale(r_out_perp, (double *)normal, cos_theta)),
+          etai_over_etat);
+
+    vec3 r_out_parallel;
+    scale(r_out_parallel, (double *)normal, -sqrt(fabs(1.0 - len_squared(r_out_perp))));
+
+    return add(ret, r_out_perp, r_out_parallel);
+}
+
 /// @brief Return true if the vector is close to zero in all dimensions.
 bool near_zero(const vec3 vec)
 {

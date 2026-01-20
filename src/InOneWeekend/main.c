@@ -6,7 +6,7 @@
 #include "sphere.h"
 #include "material.h"
 
-#define WORLD_LENGTH 4 // How many hittable objects there are in the world.
+#define WORLD_LENGTH 5 // How many hittable objects there are in the world.
 
 int main()
 {
@@ -24,7 +24,8 @@ int main()
     // Materials
     const struct Material_Cfg material_ground = {.mat = Lambertian, .albedo = {0.8, 0.8, 0.0}};
     const struct Material_Cfg material_center = {.mat = Lambertian, .albedo = {0.1, 0.2, 0.5}};
-    const struct Material_Cfg material_left = {.mat = Metal, .albedo = {0.8, 0.8, 0.8}, .fuzz = 0.3};
+    const struct Material_Cfg material_left = {.mat = Dielectric, .refraction_index = 1.50};
+    const struct Material_Cfg material_bubble = {.mat = Dielectric, .refraction_index = (1.00 / 1.50)};
     const struct Material_Cfg material_right = {.mat = Metal, .albedo = {0.8, 0.6, 0.2}, .fuzz = 1.0};
 
     struct Hittable world[WORLD_LENGTH] = {
@@ -34,6 +35,8 @@ int main()
          .object.sphere = {.center = {0.0, 0.0, -1.2}, .radius = 0.5, .mat_cfg = &material_center}},
         {.which = (enum Which_Hittable)Sphere,
          .object.sphere = {.center = {-1.0, 0.0, -1.0}, .radius = 0.5, .mat_cfg = &material_left}},
+        {.which = (enum Which_Hittable)Sphere,
+         .object.sphere = {.center = {-1.0, 0.0, -1.0}, .radius = 0.4, .mat_cfg = &material_bubble}},
         {.which = (enum Which_Hittable)Sphere,
          .object.sphere = {.center = {1.0, 0.0, -1.0}, .radius = 0.5, .mat_cfg = &material_right}},
     };

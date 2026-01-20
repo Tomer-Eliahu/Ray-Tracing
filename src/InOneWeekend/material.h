@@ -17,6 +17,7 @@ enum Material
 {
     Lambertian,
     Metal,
+    Dielectric,
 };
 
 struct Material_Cfg
@@ -29,6 +30,11 @@ struct Material_Cfg
     /// ranging from 0 (no reflection, black) to 1 (total reflection, white).
     color3 albedo;
     double fuzz; //< Controls how fuzzy the reflection is (only for Metal).
+
+    /// (For dielectric)
+    /// Refractive index in vacuum or air, or the ratio of the material's refractive index over
+    /// the refractive index of the enclosing media
+    double refraction_index;
 };
 
 /// @brief Lambertian (diffuse) material reflectance
@@ -85,4 +91,60 @@ bool metal_scatter(const struct Ray *r_in, const struct Hit_Record *rec,
     // Return true only if we scatter above the surface (adding fuzz may mean we scatter below it).
     // If we scatter below, we simply will absorb the incoming ray.
     return (dot(scattered->direction, rec->normal) > 0);
+}
+
+/// @brief Use Schlick's approximation for reflectance.
+/// @param cosine
+/// @param refraction_index
+/// @return
+/// @remarks Now real glass has reflectivity that varies with angle —
+/// look at a window at a steep angle and it becomes a mirror. There is a big ugly equation for that,
+/// but almost everybody uses a cheap and surprisingly accurate polynomial approximation by Christophe Schlick.
+static double reflectance(double cosine, double refraction_index)
+{
+    double r0 = (1 - refraction_index) / (1 + refraction_index);
+    r0 = r0 * r0;
+    return r0 + (1 - r0) * pow((1 - cosine), 5);
+}
+
+// Clear materials such as water, glass, and diamond are dielectrics.
+// When a light ray hits them, it splits into a reflected ray and a refracted (transmitted) ray.
+// We’ll handle that by randomly choosing between reflection and refraction,
+// only generating one scattered ray per interaction.
+
+/// @brief Dielectric material *refraction*
+/// @param r_in Incoming ray
+/// @param attenuation The intensity of light lost
+/// @param scattered The outbound ray from hitting this material
+bool dielectric_scatter(const struct Ray *r_in, const struct Hit_Record *rec,
+                        color3 attenuation, struct Ray *scattered)
+{
+    // Set to white
+    attenuation[0] = 1.0;
+    attenuation[1] = 1.0;
+    attenuation[2] = 1.0;
+
+    double ri = rec->front_face ? (1.0 / rec->mat_cfg->refraction_index) : rec->mat_cfg->refraction_index;
+
+    vec3 unit_direction;
+    unit(unit_direction, (double *)r_in->direction);
+
+    vec3 temp;
+    double cos_theta = fmin(dot(negate(temp, unit_direction), rec->normal), 1.0);
+    double sin_theta = sqrt(1.0 - (cos_theta * cos_theta));
+
+    bool cannot_refract = ri * sin_theta > 1.0;
+
+    if (cannot_refract || reflectance(cos_theta, ri) > random_zero_to_one())
+    {
+        reflect(scattered->direction, unit_direction, rec->normal);
+    }
+    else
+    {
+        refract(scattered->direction, unit_direction, rec->normal, ri);
+    }
+
+    memcpy(scattered->origin, rec->p, 3 * sizeof(double));
+
+    return true;
 }

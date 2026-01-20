@@ -122,6 +122,23 @@ void ray_color(color3 color, const struct Ray *ray, int depth, const struct Hitt
 
             break;
 
+        case (enum Material)Dielectric:
+
+            if (dielectric_scatter(ray, &rec, attenuation, &scattered))
+            {
+                ray_color(color, &scattered, depth - 1, world, world_length);
+                multiply(color, attenuation, color);
+                return;
+            }
+
+            // set to black
+            color[0] = 0;
+            color[1] = 0;
+            color[2] = 0;
+            return;
+
+            break;
+
         default:
             fprintf(stderr, "Could not identify Material of object hit!\n");
             fflush(stderr);
