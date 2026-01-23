@@ -15,10 +15,19 @@ struct Camera_Config
     double vfov;           //< Vertical view angle (field of view) in degrees. This is effectively our zoom in/out.
     point3 lookfrom;       //< Point camera is looking from
     point3 lookat;         //< Point camera is looking at
+
     /// @brief Camera-relative "up" direction ("view up").
     /// We can specify any up vector we want, as long as it's not parallel to the view direction
     /// (the diffrence between the look at and from points).
     vec3 vup;
+
+    /// @brief Variation angle of rays through each pixel.
+    /// @remarks By specifying the angle we preserve the same amount of blur as
+    /// we change the focus distance and, corresponding to this angle, resize the defocus disk (the lens).
+    /// Also note that defocus blur is sometimes called depth of field.
+    /// See section 13 (Defocus Blur) for more details.
+    double defocus_angle;
+    double focus_dist; //< Distance from camera lookfrom point to plane of perfect focus
 };
 
 /// @brief Store derived camera information.
@@ -32,6 +41,8 @@ struct Camera_Info
     vec3 pixel_delta_u;         //< Offset to pixel to the right
     vec3 pixel_delta_v;         //< Offset to pixel below
     vec3 u, v, w;               //< Camera frame basis vectors
+    vec3 defocus_disk_u;        //< Defocus disk horizontal radius
+    vec3 defocus_disk_v;        //< Defocus disk vertical radius
 };
 
 /// @brief returns if any objects in the world are hit by the ray
@@ -184,12 +195,9 @@ void camera_initialize(const struct Camera_Config *cfg, struct Camera_Info *cam_
     memcpy(cam_info->center, cfg->lookfrom, 3 * sizeof(double));
 
     // Determine viewport dimensions.
-    vec3 look_diff;
-    double focal_length = len(
-        subtract(look_diff, (double *)cfg->lookfrom, (double *)cfg->lookat));
     double theta = degrees_to_radians(cfg->vfov);
     double h = tan(theta / 2); // See section 12.1 for details.
-    double viewport_height = 2 * h * focal_length;
+    double viewport_height = 2 * h * cfg->focus_dist;
 
     // image_width/image_height is the *actual* aspect ratio we will have
     double viewport_width = viewport_height * ((double)cfg->image_width / cam_info->image_height);
@@ -197,7 +205,7 @@ void camera_initialize(const struct Camera_Config *cfg, struct Camera_Info *cam_
     // Calculate the u,v,w unit (orthonormal) basis vectors for the camera coordinate frame.
     // See section 12.2 for details.
     vec3 temp;
-    unit(cam_info->w, look_diff);
+    unit(cam_info->w, subtract(temp, (double *)cfg->lookfrom, (double *)cfg->lookat));
     unit(cam_info->u, cross(temp, (double *)cfg->vup, cam_info->w));
     // As w and u are perpendicular and are both unit vectors, their cross product will also be a unit vector.
     cross(cam_info->v, cam_info->w, cam_info->u);
@@ -214,11 +222,10 @@ void camera_initialize(const struct Camera_Config *cfg, struct Camera_Info *cam_
     scale(cam_info->pixel_delta_v, viewport_v, (1.0 / (double)cam_info->image_height));
 
     // Calculate the location of the upper left pixel.
-    // viewport_upper_left = center - (focal_length * w) - viewport_u/2 - viewport_v/2;
-    // Really this is lookat - viewport_u/2 - viewport_v/2.
+    // viewport_upper_left = center - (focus_dist * w) - viewport_u/2 - viewport_v/2;
     point3 temp1, temp2;
     point3 viewport_upper_left;
-    subtract(temp1, cam_info->center, scale(temp2, cam_info->w, focal_length));
+    subtract(temp1, cam_info->center, scale(temp2, cam_info->w, cfg->focus_dist));
     subtract(temp1, temp1, scale(temp2, viewport_u, (0.5)));
     subtract(viewport_upper_left, temp1, scale(temp2, viewport_v, (0.5)));
 
@@ -226,6 +233,11 @@ void camera_initialize(const struct Camera_Config *cfg, struct Camera_Info *cam_
     add(cam_info->pixel00_loc, viewport_upper_left,
         scale(temp1,
               add(temp1, cam_info->pixel_delta_u, cam_info->pixel_delta_v), 0.5));
+
+    // Calculate the camera defocus disk basis vectors.
+    double defocus_radius = cfg->focus_dist * tan(degrees_to_radians(cfg->defocus_angle / 2.0));
+    scale(cam_info->defocus_disk_u, cam_info->u, defocus_radius);
+    scale(cam_info->defocus_disk_v, cam_info->v, defocus_radius);
 }
 
 /// @brief Sets the vector to a random point in the [-.5,-.5]-[+.5,+.5] unit square.
@@ -236,9 +248,22 @@ void sample_square(vec3 vec)
     vec[3] = 0;
 }
 
-/// @brief Construct a camera ray originating from the origin
-/// and directed at randomly sampled point around the pixel location i, j.
-void get_ray(struct Ray *ray, const struct Camera_Info *cam_info, int i, int j)
+/// @brief Sets point to a random point in the camera defocus disk.
+void defocus_disk_sample(point3 point, const struct Camera_Info *cam_info)
+{
+    vec3 p;
+    random_in_unit_disk(p);
+    // point = cam_info->center + (p[0] * cam_info->defocus_disk_u) + (p[1] * cam_info->defocus_disk_v)
+    vec3 temp1, temp2;
+    scale(temp1, (double *)cam_info->defocus_disk_u, p[0]);
+    scale(temp2, (double *)cam_info->defocus_disk_v, p[1]);
+    add(temp1, temp1, temp2);
+    add(point, (double *)cam_info->center, temp1);
+}
+
+/// @brief Construct a camera ray originating from the defocus disk and directed at a randomly
+/// sampled point around the pixel location i, j.
+void get_ray(struct Ray *ray, const struct Camera_Info *cam_info, int i, int j, double defocus_angle)
 {
 
     // calculate the pixel sample location
@@ -251,8 +276,16 @@ void get_ray(struct Ray *ray, const struct Camera_Info *cam_info, int i, int j)
     scale(temp2, (double *)cam_info->pixel_delta_v, (j + offset[1]));
     add(pixel_sample, (double *)cam_info->pixel00_loc, add(temp1, temp1, temp2));
 
-    // The ray origin is the camera center
-    memcpy(ray->origin, cam_info->center, 3 * sizeof(double));
+    if (defocus_angle <= 0)
+    {
+        // The ray origin is the camera center (no defocus blur)
+        memcpy(ray->origin, cam_info->center, 3 * sizeof(double));
+    }
+    else
+    {
+        defocus_disk_sample(ray->origin, cam_info);
+    }
+
     subtract(ray->direction, pixel_sample, ray->origin);
 }
 
@@ -288,7 +321,7 @@ void camera_render(const struct Hittable *world, const int world_length, const s
             */
             for (int sample = 0; sample < cfg->samples_per_pixel; sample++)
             {
-                get_ray(&r, &cam_info, i, j);
+                get_ray(&r, &cam_info, i, j, cfg->defocus_angle);
 
                 color3 temp;
                 ray_color(temp, &r, cfg->max_depth, world, world_length);

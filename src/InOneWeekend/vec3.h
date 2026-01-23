@@ -161,6 +161,25 @@ static inline void random_on_hemisphere(vec3 rand_vec, const vec3 normal)
     }
 }
 
+/// @brief Generate a random vector on the unit disk.
+/// @remark Rejecting a random vector outside the unit square (rejection sampling)
+/// ensures a uniform distribution of sample directions on the surface of the unit disk.
+static inline void random_in_unit_disk(vec3 vec)
+{
+    // The z coordinate stays fixed at 0.
+    vec[2] = 0;
+
+    while (true)
+    {
+        vec[0] = random_in_range(-1, 1);
+        vec[1] = random_in_range(-1, 1);
+        if (len_squared(vec) < 1)
+        {
+            return;
+        }
+    }
+}
+
 /// @brief Reflect the vector vec (possibly in place) off a surface with the given surface normal.
 static inline double *reflect(vec3 ret, vec3 vec, const vec3 normal)
 {
