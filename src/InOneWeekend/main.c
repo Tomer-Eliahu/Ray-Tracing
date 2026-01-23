@@ -25,6 +25,7 @@ int main()
     const struct Material_Cfg material_ground = {.mat = Lambertian, .albedo = {0.8, 0.8, 0.0}};
     const struct Material_Cfg material_center = {.mat = Lambertian, .albedo = {0.1, 0.2, 0.5}};
     const struct Material_Cfg material_left = {.mat = Dielectric, .refraction_index = 1.50};
+    // Air bubble in Glass
     const struct Material_Cfg material_bubble = {.mat = Dielectric, .refraction_index = (1.00 / 1.50)};
     const struct Material_Cfg material_right = {.mat = Metal, .albedo = {0.8, 0.6, 0.2}, .fuzz = 1.0};
 
@@ -42,7 +43,16 @@ int main()
     };
 
     struct Camera_Config cam =
-        {.aspect_ratio = 16.0 / 9.0, .image_width = 400, .samples_per_pixel = 100, .max_depth = 50};
+        {
+            .aspect_ratio = 16.0 / 9.0,
+            .image_width = 400,
+            .samples_per_pixel = 100,
+            .max_depth = 50,
+            .vfov = 20,
+            .lookfrom = {-2, 2, 1},
+            .lookat = {0, 0, -1},
+            .vup = {0, 1, 0},
+        };
 
     camera_render(world, WORLD_LENGTH, &cam);
 

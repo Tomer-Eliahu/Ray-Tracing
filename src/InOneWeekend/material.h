@@ -28,6 +28,7 @@ struct Material_Cfg
     /// @brief Albedo is the measure of a surface's reflectivity,
     /// representing the fraction of sunlight (or other radiation) that is reflected,
     /// ranging from 0 (no reflection, black) to 1 (total reflection, white).
+    /// Note that this is done across RGB (color3) as opposed to the x-y-z axes.
     color3 albedo;
     double fuzz; //< Controls how fuzzy the reflection is (only for Metal).
 

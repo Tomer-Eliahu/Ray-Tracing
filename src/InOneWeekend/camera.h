@@ -12,6 +12,13 @@ struct Camera_Config
     int image_width;       //< Rendered image width in pixel count
     int samples_per_pixel; //< Count of random samples for each pixel
     int max_depth;         //< Maximum number of ray bounces into scene
+    double vfov;           //< Vertical view angle (field of view) in degrees. This is effectively our zoom in/out.
+    point3 lookfrom;       //< Point camera is looking from
+    point3 lookat;         //< Point camera is looking at
+    /// @brief Camera-relative "up" direction ("view up").
+    /// We can specify any up vector we want, as long as it's not parallel to the view direction
+    /// (the diffrence between the look at and from points).
+    vec3 vup;
 };
 
 /// @brief Store derived camera information.
@@ -24,6 +31,7 @@ struct Camera_Info
     point3 pixel00_loc;         //< Location of pixel 0, 0
     vec3 pixel_delta_u;         //< Offset to pixel to the right
     vec3 pixel_delta_v;         //< Offset to pixel below
+    vec3 u, v, w;               //< Camera frame basis vectors
 };
 
 /// @brief returns if any objects in the world are hit by the ray
@@ -172,35 +180,45 @@ void camera_initialize(const struct Camera_Config *cfg, struct Camera_Info *cam_
 
     cam_info->pixel_samples_scale = 1.0 / cfg->samples_per_pixel;
 
-    // Set the camera center to 0,0,0;
-    memset(cam_info->center, 0, 3 * sizeof(double));
+    // Set the camera center;
+    memcpy(cam_info->center, cfg->lookfrom, 3 * sizeof(double));
 
     // Determine viewport dimensions.
-
-    double focal_length = 1.0;
-    double viewport_height = 2.0;
+    vec3 look_diff;
+    double focal_length = len(
+        subtract(look_diff, (double *)cfg->lookfrom, (double *)cfg->lookat));
+    double theta = degrees_to_radians(cfg->vfov);
+    double h = tan(theta / 2); // See section 12.1 for details.
+    double viewport_height = 2 * h * focal_length;
 
     // image_width/image_height is the *actual* aspect ratio we will have
     double viewport_width = viewport_height * ((double)cfg->image_width / cam_info->image_height);
 
+    // Calculate the u,v,w unit (orthonormal) basis vectors for the camera coordinate frame.
+    // See section 12.2 for details.
+    vec3 temp;
+    unit(cam_info->w, look_diff);
+    unit(cam_info->u, cross(temp, (double *)cfg->vup, cam_info->w));
+    // As w and u are perpendicular and are both unit vectors, their cross product will also be a unit vector.
+    cross(cam_info->v, cam_info->w, cam_info->u);
+
     // Calculate the vectors across the horizontal and down the vertical viewport edges.
-    vec3 viewport_u = {viewport_width, 0, 0};
-    vec3 viewport_v = {0, -viewport_height, 0};
+    vec3 viewport_u, viewport_v;
+    scale(viewport_u, cam_info->u, viewport_width); // Vector across viewport horizontal edge
+    // Vector *down* viewport vertical edge
+    scale(viewport_v, negate(viewport_v, cam_info->v), viewport_height);
 
     // Calculate the horizontal and vertical delta vectors from pixel to pixel.
     // This is just viewport_u/image_width and viewport_v/image_height
-    cam_info->pixel_delta_u[0] = (double)viewport_width / cfg->image_width;
-    cam_info->pixel_delta_u[1] = 0;
-    cam_info->pixel_delta_u[2] = 0;
-
-    cam_info->pixel_delta_v[0] = 0;
-    cam_info->pixel_delta_v[1] = (double)-viewport_height / cam_info->image_height;
-    cam_info->pixel_delta_v[2] = 0;
+    scale(cam_info->pixel_delta_u, viewport_u, (1.0 / (double)cfg->image_width));
+    scale(cam_info->pixel_delta_v, viewport_v, (1.0 / (double)cam_info->image_height));
 
     // Calculate the location of the upper left pixel.
+    // viewport_upper_left = center - (focal_length * w) - viewport_u/2 - viewport_v/2;
+    // Really this is lookat - viewport_u/2 - viewport_v/2.
     point3 temp1, temp2;
     point3 viewport_upper_left;
-    subtract(temp1, cam_info->center, (vec3){0, 0, focal_length});
+    subtract(temp1, cam_info->center, scale(temp2, cam_info->w, focal_length));
     subtract(temp1, temp1, scale(temp2, viewport_u, (0.5)));
     subtract(viewport_upper_left, temp1, scale(temp2, viewport_v, (0.5)));
 
