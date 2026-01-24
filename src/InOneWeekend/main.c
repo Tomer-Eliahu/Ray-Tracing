@@ -6,7 +6,7 @@
 #include "sphere.h"
 #include "material.h"
 
-#define WORLD_LENGTH 5 // How many hittable objects there are in the world.
+#define MAX_WORLD_LENGTH 500 // How many hittable objects there could possibly be in the world.
 
 int main()
 {
@@ -22,41 +22,111 @@ int main()
     // World
 
     // Materials
-    const struct Material_Cfg material_ground = {.mat = Lambertian, .albedo = {0.8, 0.8, 0.0}};
-    const struct Material_Cfg material_center = {.mat = Lambertian, .albedo = {0.1, 0.2, 0.5}};
-    const struct Material_Cfg material_left = {.mat = Dielectric, .refraction_index = 1.50};
-    // Air bubble in Glass
-    const struct Material_Cfg material_bubble = {.mat = Dielectric, .refraction_index = (1.00 / 1.50)};
-    const struct Material_Cfg material_right = {.mat = Metal, .albedo = {0.8, 0.6, 0.2}, .fuzz = 1.0};
 
-    struct Hittable world[WORLD_LENGTH] = {
-        {.which = (enum Which_Hittable)Sphere,
-         .object.sphere = {.center = {0.0, -100.5, -1.0}, .radius = 100, .mat_cfg = &material_ground}},
-        {.which = (enum Which_Hittable)Sphere,
-         .object.sphere = {.center = {0.0, 0.0, -1.2}, .radius = 0.5, .mat_cfg = &material_center}},
-        {.which = (enum Which_Hittable)Sphere,
-         .object.sphere = {.center = {-1.0, 0.0, -1.0}, .radius = 0.5, .mat_cfg = &material_left}},
-        {.which = (enum Which_Hittable)Sphere,
-         .object.sphere = {.center = {-1.0, 0.0, -1.0}, .radius = 0.4, .mat_cfg = &material_bubble}},
-        {.which = (enum Which_Hittable)Sphere,
-         .object.sphere = {.center = {1.0, 0.0, -1.0}, .radius = 0.5, .mat_cfg = &material_right}},
-    };
+    const struct Material_Cfg ground_material = {.mat = Lambertian, .albedo = {0.5, 0.5, 0.5}};
+
+    const struct Material_Cfg glass_material = {.mat = Dielectric, .refraction_index = 1.5};
+
+    struct Hittable world[MAX_WORLD_LENGTH];
+    world[0] = (struct Hittable){.which = (enum Which_Hittable)Sphere,
+                                 .object.sphere = {.center = {0.0, -1000.0, 0.0},
+                                                   .radius = 1000.0,
+                                                   .mat_cfg = &ground_material}};
+
+    int actual_world_len = 1; // How many Hittable objects we actually have in the scene
+    struct Material_Cfg materials[MAX_WORLD_LENGTH];
+    int additonal_materials = 0;
+
+    for (int a = -11; a < 11; a++)
+    {
+        for (int b = -11; b < 11; b++)
+        {
+            point3 center = {a + 0.9 * random_zero_to_one(), 0.2, b + 0.9 * random_zero_to_one()};
+            vec3 temp;
+            if (len(subtract(temp, center, (point3){4, 0.2, 0})) > 0.9)
+            {
+                double choose_mat = random_zero_to_one();
+
+                if (choose_mat < 0.8)
+                {
+                    // diffuse (Lambertian)
+                    vec3 temp1, temp2;
+                    vec_rand_zero_to_one(temp1);
+                    vec_rand_zero_to_one(temp2);
+
+                    struct Material_Cfg new_mat = {.mat = Lambertian};
+                    multiply(new_mat.albedo, temp1, temp2);
+                    materials[additonal_materials] = new_mat;
+
+                    world[actual_world_len] =
+                        (struct Hittable){.which = (enum Which_Hittable)Sphere,
+                                          .object.sphere = {.radius = 0.2,
+                                                            .mat_cfg = &materials[additonal_materials]}};
+                    additonal_materials++;
+                }
+                else if (choose_mat < 0.95)
+                {
+                    // metal
+                    struct Material_Cfg new_mat = {.mat = Metal, .fuzz = random_in_range(0, 0.5)};
+                    vec_rand_in_range(new_mat.albedo, 0.5, 1);
+                    materials[additonal_materials] = new_mat;
+
+                    world[actual_world_len] =
+                        (struct Hittable){.which = (enum Which_Hittable)Sphere,
+                                          .object.sphere = {.radius = 0.2,
+                                                            .mat_cfg = &materials[additonal_materials]}};
+                    additonal_materials++;
+                }
+                else
+                {
+                    // glass
+                    world[actual_world_len] =
+                        (struct Hittable){.which = (enum Which_Hittable)Sphere,
+                                          .object.sphere = {.radius = 0.2,
+                                                            .mat_cfg = &glass_material}};
+                }
+
+                memcpy(world[actual_world_len].object.sphere.center, center, 3 * sizeof(double));
+                actual_world_len++;
+            }
+        }
+    }
+
+    world[actual_world_len++] = (struct Hittable){.which = (enum Which_Hittable)Sphere,
+                                                  .object.sphere = {.center = {0.0, 1.0, 0.0},
+                                                                    .radius = 1.0,
+                                                                    .mat_cfg = &glass_material}};
+
+    // The book calls glass_material material1.
+    const struct Material_Cfg material2 = {.mat = Lambertian, .albedo = {0.4, 0.2, 0.1}};
+
+    world[actual_world_len++] = (struct Hittable){.which = (enum Which_Hittable)Sphere,
+                                                  .object.sphere = {.center = {-4.0, 1.0, 0.0},
+                                                                    .radius = 1.0,
+                                                                    .mat_cfg = &material2}};
+
+    const struct Material_Cfg material3 = {.mat = Metal, .albedo = {0.7, 0.6, 0.5}, .fuzz = 0.0};
+
+    world[actual_world_len++] = (struct Hittable){.which = (enum Which_Hittable)Sphere,
+                                                  .object.sphere = {.center = {4, 1, 0},
+                                                                    .radius = 1.0,
+                                                                    .mat_cfg = &material3}};
 
     struct Camera_Config cam =
         {
             .aspect_ratio = 16.0 / 9.0,
-            .image_width = 400,
-            .samples_per_pixel = 100,
+            .image_width = 1200,
+            .samples_per_pixel = 500,
             .max_depth = 50,
             .vfov = 20,
-            .lookfrom = {-2, 2, 1},
-            .lookat = {0, 0, -1},
+            .lookfrom = {13, 2, 3},
+            .lookat = {0, 0, 0},
             .vup = {0, 1, 0},
-            .defocus_angle = 10.0,
-            .focus_dist = 3.4,
+            .defocus_angle = 0.6,
+            .focus_dist = 10.0,
         };
 
-    camera_render(world, WORLD_LENGTH, &cam);
+    camera_render(world, actual_world_len, &cam);
 
     return 0;
 }
