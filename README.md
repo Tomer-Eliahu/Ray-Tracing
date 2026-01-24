@@ -15,3 +15,12 @@ or this [VS Code extension] (what I used).
 
 
 [VS Code extension]: https://marketplace.visualstudio.com/items?itemName=ngtystr.ppm-pgm-viewer-for-vscode
+
+
+## Some Images
+I converted some images from ppm to png, so they can be displayed here:
+
+<p align="center">
+  <img src="images\20_book_one_final_render.png" alt="Book One Final Render"/>
+  Book One Final Render
+</p>
