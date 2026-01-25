@@ -27,9 +27,31 @@ set ( SOURCE_ONE_WEEKEND
 #   src/InOneWeekend/vec3.h
 )
 
+set ( SOURCE_NEXT_WEEK
+  src/TheNextWeek/main.c
+  # src/TheNextWeek/aabb.h
+  # src/TheNextWeek/bvh.h
+  # src/TheNextWeek/camera.h
+  # src/TheNextWeek/color.h
+  # src/TheNextWeek/constant_medium.h
+  # src/TheNextWeek/hittable.h
+  # src/TheNextWeek/hittable_list.h
+  # src/TheNextWeek/interval.h
+  # src/TheNextWeek/material.h
+  # src/TheNextWeek/perlin.h
+  # src/TheNextWeek/quad.h
+  # src/TheNextWeek/ray.h
+  # src/TheNextWeek/rtw_stb_image.h
+  # src/TheNextWeek/rtweekend.h
+  # src/TheNextWeek/sphere.h
+  # src/TheNextWeek/texture.h
+  # src/TheNextWeek/vec3.h
+)
+
 include_directories(src)
 
 
 # Executables
 
 add_executable(inOneWeekend      ${SOURCE_ONE_WEEKEND})
+add_executable(theNextWeek       ${SOURCE_NEXT_WEEK})
