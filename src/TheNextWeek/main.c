@@ -8,7 +8,7 @@
 
 /// How many hittable objects there could possibly be in the world.
 /// If we write past the end of an array with this size, the OS throws an exception for us.
-#define MAX_WORLD_LENGTH 500 
+#define MAX_WORLD_LENGTH 500
 
 /// Enable truly random results that vary from run to run.
 #define WANT_TRUE_RANDOM
@@ -42,10 +42,13 @@ int main()
     const struct Material_Cfg glass_material = {.mat = Dielectric, .refraction_index = 1.5};
 
     struct Hittable world[MAX_WORLD_LENGTH];
-    world[0] = (struct Hittable){.which = (enum Which_Hittable)Sphere,
-                                 .object.sphere = {.center = {0.0, -1000.0, 0.0},
-                                                   .radius = 1000.0,
-                                                   .mat_cfg = &ground_material}};
+    world[0] =
+        (struct Hittable){.which = (enum Which_Hittable)Sphere,
+                          .object.sphere =
+                              {.center =
+                                   (struct Ray){.origin = {0.0, -1000.0, 0.0}, .direction = {0}},
+                               .radius = 1000.0,
+                               .mat_cfg = &ground_material}};
 
     int actual_world_len = 1; // How many Hittable objects we actually have in the scene
     struct Material_Cfg materials[MAX_WORLD_LENGTH];
@@ -72,10 +75,13 @@ int main()
                     multiply(new_mat.albedo, temp1, temp2);
                     materials[additonal_materials] = new_mat;
 
+                    // Each sphere moves from its center C at time t=0 to C+(0,something_non_negative,0) at time t=1
                     world[actual_world_len] =
                         (struct Hittable){.which = (enum Which_Hittable)Sphere,
-                                          .object.sphere = {.radius = 0.2,
-                                                            .mat_cfg = &materials[additonal_materials]}};
+                                          .object.sphere = {
+                                              .center.direction = {0, random_in_range(0, 0.5), 0},
+                                              .radius = 0.2,
+                                              .mat_cfg = &materials[additonal_materials]}};
                     additonal_materials++;
                 }
                 else if (choose_mat < 0.95)
@@ -87,8 +93,10 @@ int main()
 
                     world[actual_world_len] =
                         (struct Hittable){.which = (enum Which_Hittable)Sphere,
-                                          .object.sphere = {.radius = 0.2,
-                                                            .mat_cfg = &materials[additonal_materials]}};
+                                          .object.sphere = {
+                                              .center.direction = {0},
+                                              .radius = 0.2,
+                                              .mat_cfg = &materials[additonal_materials]}};
                     additonal_materials++;
                 }
                 else
@@ -96,35 +104,46 @@ int main()
                     // glass
                     world[actual_world_len] =
                         (struct Hittable){.which = (enum Which_Hittable)Sphere,
-                                          .object.sphere = {.radius = 0.2,
-                                                            .mat_cfg = &glass_material}};
+                                          .object.sphere = {
+                                              .center.direction = {0},
+                                              .radius = 0.2,
+                                              .mat_cfg = &glass_material}};
                 }
 
-                memcpy(world[actual_world_len].object.sphere.center, center, 3 * sizeof(double));
+                memcpy(world[actual_world_len].object.sphere.center.origin, center, 3 * sizeof(double));
                 actual_world_len++;
             }
         }
     }
 
-    world[actual_world_len++] = (struct Hittable){.which = (enum Which_Hittable)Sphere,
-                                                  .object.sphere = {.center = {0.0, 1.0, 0.0},
-                                                                    .radius = 1.0,
-                                                                    .mat_cfg = &glass_material}};
+    world[actual_world_len++] =
+        (struct Hittable){.which = (enum Which_Hittable)Sphere,
+                          .object.sphere =
+                              {.center =
+                                   (struct Ray){.origin = {0.0, 1.0, 0.0}, .direction = {0}},
+                               .radius = 1.0,
+                               .mat_cfg = &glass_material}};
 
     // The book calls glass_material material1.
     const struct Material_Cfg material2 = {.mat = Lambertian, .albedo = {0.4, 0.2, 0.1}};
 
-    world[actual_world_len++] = (struct Hittable){.which = (enum Which_Hittable)Sphere,
-                                                  .object.sphere = {.center = {-4.0, 1.0, 0.0},
-                                                                    .radius = 1.0,
-                                                                    .mat_cfg = &material2}};
+    world[actual_world_len++] =
+        (struct Hittable){.which = (enum Which_Hittable)Sphere,
+                          .object.sphere =
+                              {.center =
+                                   (struct Ray){.origin = {-4.0, 1.0, 0.0}, .direction = {0}},
+                               .radius = 1.0,
+                               .mat_cfg = &material2}};
 
     const struct Material_Cfg material3 = {.mat = Metal, .albedo = {0.7, 0.6, 0.5}, .fuzz = 0.0};
 
-    world[actual_world_len++] = (struct Hittable){.which = (enum Which_Hittable)Sphere,
-                                                  .object.sphere = {.center = {4, 1, 0},
-                                                                    .radius = 1.0,
-                                                                    .mat_cfg = &material3}};
+    world[actual_world_len++] =
+        (struct Hittable){.which = (enum Which_Hittable)Sphere,
+                          .object.sphere =
+                              {.center =
+                                   (struct Ray){.origin = {4, 1, 0}, .direction = {0}},
+                               .radius = 1.0,
+                               .mat_cfg = &material3}};
 
     struct Camera_Config cam =
         {
@@ -132,10 +151,12 @@ int main()
             .image_width = 400,
             .samples_per_pixel = 100,
             .max_depth = 50,
+
             .vfov = 20,
             .lookfrom = {13, 2, 3},
             .lookat = {0, 0, 0},
             .vup = {0, 1, 0},
+
             .defocus_angle = 0.6,
             .focus_dist = 10.0,
         };

@@ -287,6 +287,9 @@ void get_ray(struct Ray *ray, const struct Camera_Info *cam_info, int i, int j, 
     }
 
     subtract(ray->direction, pixel_sample, ray->origin);
+
+    // Ray Time
+    ray->tm = random_zero_to_one();
 }
 
 /// @brief Render the image
@@ -317,7 +320,7 @@ void camera_render(const struct Hittable *world, const int world_length, const s
                 For a single pixel composed of multiple samples,
                 we'll select samples from the area surrounding the pixel
                 and average the resulting light (color) values together. We do this to accomplish antialiasing
-                (smoothing out edges). Remember a pixel is really a point sample.
+                (smoothing out edges). **Remember a pixel is really a point sample**.
             */
             for (int sample = 0; sample < cfg->samples_per_pixel; sample++)
             {

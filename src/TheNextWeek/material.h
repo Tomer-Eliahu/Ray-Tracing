@@ -61,6 +61,8 @@ bool lambertian_scatter(const struct Ray *r_in, const struct Hit_Record *rec,
     }
 
     memcpy(scattered->origin, rec->p, 3 * sizeof(double));
+    scattered->tm = r_in->tm;
+
     memcpy(attenuation, rec->mat_cfg->albedo, 3 * sizeof(double));
     return true;
 }
@@ -86,6 +88,7 @@ bool metal_scatter(const struct Ray *r_in, const struct Hit_Record *rec,
 
     memcpy(scattered->origin, rec->p, 3 * sizeof(double));
     memcpy(scattered->direction, reflected, 3 * sizeof(double));
+    scattered->tm = r_in->tm;
 
     memcpy(attenuation, rec->mat_cfg->albedo, 3 * sizeof(double));
 
@@ -146,6 +149,7 @@ bool dielectric_scatter(const struct Ray *r_in, const struct Hit_Record *rec,
     }
 
     memcpy(scattered->origin, rec->p, 3 * sizeof(double));
+    scattered->tm = r_in->tm;
 
     return true;
 }

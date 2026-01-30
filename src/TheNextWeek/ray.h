@@ -21,7 +21,26 @@ struct Ray
 {
     point3 origin;
     vec3 direction;
+    double tm; //< The exact time of the ray existing, in absolute time.
 };
+
+/* We added Motion Blur (see Section 2 of TheNextWeek book)
+
+Our model is the following: We will render only a single frame,
+implicitly assuming a start at time = 0 and ending at time = 1.
+Our first task is to modify the camera to launch rays with random times in [0,1],
+and our second task will be the creation of an animated sphere.
+
+To see why what we are doing here still preserves the other effects we have (anti-aliasing + defocus blur),
+think of the rays we are averaging. Motion blur is simply averaging the same image over time (so think
+of us producing a complete image at time 0, one at time 0.1, one at time 0.2,
+and averaging all those complete images together).
+It is clear that for the static parts of the image what we do now (our changes for this section)
+is the exact same thing we did previously (since time has no impact).
+And as for the dynamic parts: we are averaging the same rays we would
+have if we were averaging complete images (we just average less of them than in that way).
+
+*/
 
 /// @brief Computes dest: the point the ray will be at t (P(t)= Origin+t* Direction).
 double *ray_at(vec3 dest, const struct Ray *ray, double t)

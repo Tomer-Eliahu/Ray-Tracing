@@ -8,12 +8,18 @@
 
 struct Sphere
 {
-    point3 center;
+    /// @brief Having the center be a ray allows us to have a moving sphere in addition to a static sphere.
+    /// The origin of the ray is where the sphere center point was at time t = 0.
+    /// The sphere moves in this ray's direction. This means that at time t = 1 the ray will be at
+    /// the vector = center.origin + center.direction.
+    /// @remark If we want a static sphere, just have the center.direction be the zero vector.
+    /// @remark Note that the time parameter of the center ray itself (center.tm) is not used.
+    struct Ray center;
     double radius;                      //< Must be 0<=
     const struct Material_Cfg *mat_cfg; //< The material config for the material the sphere is made from.
 };
 
-/// @brief Sets the hit record normal vector.
+/// @brief Sets the hit record normal vector. Note this will set rec->normal to have unit length.
 /// @param ray
 /// @param outward_normal Assumed to have unit length!
 /// @param rec
@@ -35,9 +41,12 @@ void sphere_set_face_normal(const struct Ray *ray,
 /// @return bool if sphere was hit by given ray
 bool sphere_hit(const struct Sphere *sphere, const struct Ray *ray, struct Interval ray_interval, struct Hit_Record *rec)
 {
+    // Find out where the sphere center is at this ray's time.
+    point3 current_center;
+    ray_at(current_center, &sphere->center, ray->tm);
 
     vec3 diff;
-    subtract(diff, (double *)sphere->center, (double *)ray->origin);
+    subtract(diff, current_center, (double *)ray->origin);
 
     double a = len_squared(ray->direction);
     double h = dot(ray->direction, diff); // Note this is not b.
@@ -69,7 +78,7 @@ bool sphere_hit(const struct Sphere *sphere, const struct Ray *ray, struct Inter
     // This is because the radius is exactly the magnitude of this vector (rec.p - center).
     vec3 outward_normal;
     scale(outward_normal,
-          subtract(rec->normal, rec->p, (double *)sphere->center), (1 / sphere->radius));
+          subtract(rec->normal, rec->p, current_center), (1 / sphere->radius));
 
     sphere_set_face_normal(ray, outward_normal, rec);
 
