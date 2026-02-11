@@ -49,6 +49,22 @@ static inline double interval_clamp(const struct Interval *interval, double x)
     return x;
 }
 
+/// @brief Expand an interval by a delta (pad it by delta/2 each way).
+/// @param ret The new padded interval.
+void interval_expand(struct Interval *ret, const struct Interval *interval, double delta)
+{
+    double padding = delta / 2;
+    ret->min = interval->min - padding;
+    ret->max = interval->max + padding;
+}
+
+/// @brief Find the interval that tightly encloses the two input intervals.
+void interval_enclose(struct Interval *ret, const struct Interval *a, const struct Interval *b)
+{
+    ret->min = (a->min <= b->min) ? a->min : b->min;
+    ret->max = (a->max >= b->max) ? a->max : b->max;
+}
+
 #define INTERVAL_EMPTY \
     (struct Interval) { .min = infinity, .max = -infinity }
 

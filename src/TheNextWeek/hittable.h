@@ -11,17 +11,5 @@ struct Hit_Record
     vec3 normal;
     struct Material_Cfg *mat_cfg; //< The material config for the object we hit.
     bool front_face;              //< If the ray hits the front_face of the object or the back_face.
-    double t;
+    double t;                     //< Recall we think of a ray as a function P(t)=Origin+t*Direction.
 };
-
-// int hit_example(const struct Ray* ray, struct Interval ray_interval, struct Hit_Record* rec) {
-//     return 0;
-// }
-
-// /// @brief Sets the front_face field of the Hit Record
-// /// @param ray
-// /// @param outward_normal
-// void set_face_normal_example(const struct Ray* ray, const vec3 outward_normal)
-// {
-//     return;
-// }

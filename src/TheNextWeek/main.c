@@ -5,6 +5,7 @@
 #include "hittable_list.h"
 #include "sphere.h"
 #include "material.h"
+#include "bvh.h"
 
 /// How many hittable objects there could possibly be in the world.
 /// If we write past the end of an array with this size, the OS throws an exception for us.
@@ -161,7 +162,26 @@ int main()
             .focus_dist = 10.0,
         };
 
-    camera_render(world, actual_world_len, &cam);
+    // Initilize bounding boxes for the Spheres. We do it all here just for readability.
+    for (int i = 0; i < actual_world_len; i++)
+    {
+        if (is_zero(world[i].object.sphere.center.direction))
+        {
+            // Static Sphere
+            sphere_static_bound(&world[i].object.sphere);
+        }
+        else
+        {
+            // Moving Sphere
+            sphere_moving_bound(&world[i].object.sphere);
+        }
+    }
+
+    // We rely on the OS to cleanup the malloced memory
+    // as we need it for the rest of the program's duration anyhow.
+    struct BVH_Node *world_tree = BVH_construct_tree(world, actual_world_len);
+
+    camera_render(world_tree, &cam);
 
     return 0;
 }

@@ -5,6 +5,7 @@
 #include "sphere.h"
 #include "rtweekend.h"
 #include "material.h"
+#include "bvh.h"
 
 struct Camera_Config
 {
@@ -45,6 +46,11 @@ struct Camera_Info
     vec3 defocus_disk_v;        //< Defocus disk vertical radius
 };
 
+/* Book 2 Section 3: we now use BVH_node_hit instead of world_hit for faster runtimes.
+
+We also changed the signatures of ray_color and camera_render below
+from using const struct Hittable *world to using const struct BVH *world.
+
 /// @brief returns if any objects in the world are hit by the ray
 /// @param world an array of hittable objects
 /// @param ray
@@ -84,9 +90,10 @@ bool world_hit(const struct Hittable *world, int world_length, const struct Ray 
 
     return hit_anything;
 }
+*/
 
 ///@brief sets the color for a given scene ray
-void ray_color(color3 color, const struct Ray *ray, int depth, const struct Hittable *world, int world_length)
+void ray_color(color3 color, const struct Ray *ray, int depth, const struct BVH_Node *world)
 {
     // If we've exceeded the ray bounce limit, no more light is gathered.
     if (depth <= 0)
@@ -100,7 +107,7 @@ void ray_color(color3 color, const struct Ray *ray, int depth, const struct Hitt
     struct Hit_Record rec;
 
     // Note that we are careful to set the min to 0.001 to get rid of shadow acne (see section 9.3).
-    if (world_hit(world, world_length, ray, (struct Interval){.min = 0.001, .max = infinity}, &rec))
+    if (BVH_node_hit(world, ray, (struct Interval){.min = 0.001, .max = infinity}, &rec))
     {
 
         struct Ray scattered;
@@ -111,7 +118,7 @@ void ray_color(color3 color, const struct Ray *ray, int depth, const struct Hitt
         case (enum Material)Lambertian:
             if (lambertian_scatter(ray, &rec, attenuation, &scattered))
             {
-                ray_color(color, &scattered, depth - 1, world, world_length);
+                ray_color(color, &scattered, depth - 1, world);
                 multiply(color, attenuation, color);
                 return;
             }
@@ -128,7 +135,7 @@ void ray_color(color3 color, const struct Ray *ray, int depth, const struct Hitt
 
             if (metal_scatter(ray, &rec, attenuation, &scattered))
             {
-                ray_color(color, &scattered, depth - 1, world, world_length);
+                ray_color(color, &scattered, depth - 1, world);
                 multiply(color, attenuation, color);
                 return;
             }
@@ -145,7 +152,7 @@ void ray_color(color3 color, const struct Ray *ray, int depth, const struct Hitt
 
             if (dielectric_scatter(ray, &rec, attenuation, &scattered))
             {
-                ray_color(color, &scattered, depth - 1, world, world_length);
+                ray_color(color, &scattered, depth - 1, world);
                 multiply(color, attenuation, color);
                 return;
             }
@@ -293,8 +300,8 @@ void get_ray(struct Ray *ray, const struct Camera_Info *cam_info, int i, int j, 
 }
 
 /// @brief Render the image
-/// @param world a list of Hittable objects
-void camera_render(const struct Hittable *world, const int world_length, const struct Camera_Config *cfg)
+/// @param world a list of Hittable objects in the form of a BVH tree!
+void camera_render(const struct BVH_Node *world, const struct Camera_Config *cfg)
 {
 
     struct Camera_Info cam_info;
@@ -327,7 +334,7 @@ void camera_render(const struct Hittable *world, const int world_length, const s
                 get_ray(&r, &cam_info, i, j, cfg->defocus_angle);
 
                 color3 temp;
-                ray_color(temp, &r, cfg->max_depth, world, world_length);
+                ray_color(temp, &r, cfg->max_depth, world);
                 add(pixel_color, pixel_color, temp);
             }
 

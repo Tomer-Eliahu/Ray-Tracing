@@ -5,6 +5,7 @@
 #include "vec3.h"
 #include "ray.h"
 #include "material.h"
+#include "aabb.h"
 
 struct Sphere
 {
@@ -15,9 +16,53 @@ struct Sphere
     /// @remark If we want a static sphere, just have the center.direction be the zero vector.
     /// @remark Note that the time parameter of the center ray itself (center.tm) is not used.
     struct Ray center;
+
     double radius;                      //< Must be 0<=
     const struct Material_Cfg *mat_cfg; //< The material config for the material the sphere is made from.
+
+    /// @brief The bounding box over the sphere.
+    /// @remark For a stationary sphere, initilize it by calling sphere_static_bound.
+    /// @remark For a moving sphere, initilize it by calling sphere_moving_bound.
+    struct AABB bbox;
 };
+
+/// @brief Initilizes the bounding box for a *stationary* sphere.
+/// @remark Must have radius and center.origin initilized before this call!
+void sphere_static_bound(struct Sphere *sphere)
+{
+    vec3 rvec = {sphere->radius, sphere->radius, sphere->radius};
+    point3 sub_res, add_res;
+    subtract(sub_res, sphere->center.origin, rvec);
+    add(add_res, sphere->center.origin, rvec);
+    aabb_from_points(&sphere->bbox, sub_res, add_res);
+}
+
+/// @brief Initilizes the bounding box for a *moving* sphere.
+/// This is be the bounds over the entire range of motion, from time=0 to time=1.
+/// @remark Must have radius and center (both origin and direction) initilized before this call!
+void sphere_moving_bound(struct Sphere *sphere)
+{
+    // To do this, we can take the box of the sphere at time=0,
+    // and the box of the sphere at time=1, and compute the enclosing box around those two boxes.
+    // Note this assumes all of our motion is linear (that is the sphere does not backtrack).
+    vec3 rvec = {sphere->radius, sphere->radius, sphere->radius};
+    struct AABB box0, box1;
+    point3 center_at0, center_at1;
+    ray_at(center_at0, &sphere->center, 0);
+    ray_at(center_at1, &sphere->center, 1);
+    point3 temp0, temp1;
+
+    // box at t=0
+    aabb_from_points(&box0,
+                     subtract(temp0, center_at0, rvec),
+                     add(temp1, center_at0, rvec));
+    // box at t=1
+    aabb_from_points(&box1,
+                     subtract(temp0, center_at1, rvec),
+                     add(temp1, center_at1, rvec));
+
+    aabb_from_boxes(&sphere->bbox, &box0, &box1);
+}
 
 /// @brief Sets the hit record normal vector. Note this will set rec->normal to have unit length.
 /// @param ray
@@ -34,7 +79,7 @@ void sphere_set_face_normal(const struct Ray *ray,
     rec->front_face ? memcpy(rec->normal, outward_normal, 3 * sizeof(double)) : negate(rec->normal, (double *)outward_normal);
 }
 
-/// @brief detect if the ray hits the sphere
+/// @brief detect if the ray hits the sphere (and updates the hit record)
 /// @param ray
 /// @param ray_interval
 /// @param rec the Hit_Record

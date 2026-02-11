@@ -29,6 +29,12 @@ static inline double random_in_range(double min, double max)
     return min + (max - min) * random_zero_to_one();
 }
 
+/// @brief Returns a random integer in [min,max].
+static inline int random_int(int min, int max)
+{
+    return (int)random_in_range(min, max + 1);
+}
+
 // Common Headers
 
 #include "color.h"

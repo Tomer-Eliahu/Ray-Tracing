@@ -218,3 +218,11 @@ bool near_zero(const vec3 vec)
     double s = 1e-8;
     return (fabs(vec[0]) < s) && (fabs(vec[1]) < s) && (fabs(vec[2]) < s);
 }
+
+/// @brief Returns true if the vector is zero in all dimensions.
+/// Note you might want to use the function near_zero instead
+/// if you are looking at a vector that is a result of a computation.
+static bool inline is_zero(const vec3 vec)
+{
+    return (vec[0] == 0) && (vec[1] == 0) && (vec[2] == 0);
+}
