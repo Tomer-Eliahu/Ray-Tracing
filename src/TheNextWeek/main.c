@@ -6,6 +6,7 @@
 #include "sphere.h"
 #include "material.h"
 #include "bvh.h"
+#include "texture.h"
 
 /// How many hittable objects there could possibly be in the world.
 /// If we write past the end of an array with this size, the OS throws an exception for us.
@@ -36,11 +37,18 @@ int main()
 
     // World
 
+    // Textures
+
+    struct Texture ground_texture = {.which = CHECKER};
+    make_checker_from_colors(&ground_texture.object.checker, 0.32,
+                             (color3){0.2, 0.3, 0.1}, (color3){0.9, 0.9, 0.9});
+
     // Materials
 
-    const struct Material_Cfg ground_material = {.mat = Lambertian, .albedo = {0.5, 0.5, 0.5}};
+    const struct Material_Cfg ground_material = {.which = Lambertian,
+                                                 .object.lambertian.tex = &ground_texture};
 
-    const struct Material_Cfg glass_material = {.mat = Dielectric, .refraction_index = 1.5};
+    const struct Material_Cfg glass_material = {.which = Dielectric, .object.dielectric.refraction_index = 1.5};
 
     struct Hittable world[MAX_WORLD_LENGTH];
     world[0] =
@@ -72,8 +80,10 @@ int main()
                     vec_rand_zero_to_one(temp1);
                     vec_rand_zero_to_one(temp2);
 
-                    struct Material_Cfg new_mat = {.mat = Lambertian};
-                    multiply(new_mat.albedo, temp1, temp2);
+                    struct Material_Cfg new_mat = {.which = Lambertian, 
+                        .object.lambertian.tex = malloc(sizeof(struct Texture))};
+                    new_mat.object.lambertian.tex->which = SOLID_COLOR;
+                    multiply(new_mat.object.lambertian.tex->object.sct.albedo, temp1, temp2);
                     materials[additonal_materials] = new_mat;
 
                     // Each sphere moves from its center C at time t=0 to C+(0,something_non_negative,0) at time t=1
@@ -88,8 +98,9 @@ int main()
                 else if (choose_mat < 0.95)
                 {
                     // metal
-                    struct Material_Cfg new_mat = {.mat = Metal, .fuzz = random_in_range(0, 0.5)};
-                    vec_rand_in_range(new_mat.albedo, 0.5, 1);
+                    struct Material_Cfg new_mat =
+                        {.which = Metal, .object.metal.fuzz = random_in_range(0, 0.5)};
+                    vec_rand_in_range(new_mat.object.metal.albedo, 0.5, 1);
                     materials[additonal_materials] = new_mat;
 
                     world[actual_world_len] =
@@ -126,7 +137,8 @@ int main()
                                .mat_cfg = &glass_material}};
 
     // The book calls glass_material material1.
-    const struct Material_Cfg material2 = {.mat = Lambertian, .albedo = {0.4, 0.2, 0.1}};
+    struct Texture material2_texture = {.which = SOLID_COLOR, .object.sct.albedo = {0.4, 0.2, 0.1}};
+    const struct Material_Cfg material2 = {.which = Lambertian, .object.lambertian.tex = &material2_texture};
 
     world[actual_world_len++] =
         (struct Hittable){.which = (enum Which_Hittable)Sphere,
@@ -136,7 +148,8 @@ int main()
                                .radius = 1.0,
                                .mat_cfg = &material2}};
 
-    const struct Material_Cfg material3 = {.mat = Metal, .albedo = {0.7, 0.6, 0.5}, .fuzz = 0.0};
+    const struct Material_Cfg material3 = {.which = Metal,
+                                           .object.metal = {.albedo = {0.7, 0.6, 0.5}, .fuzz = 0.0}};
 
     world[actual_world_len++] =
         (struct Hittable){.which = (enum Which_Hittable)Sphere,

@@ -12,4 +12,6 @@ struct Hit_Record
     struct Material_Cfg *mat_cfg; //< The material config for the object we hit.
     bool front_face;              //< If the ray hits the front_face of the object or the back_face.
     double t;                     //< Recall we think of a ray as a function P(t)=Origin+t*Direction.
+    ///@brief The u,v surface texture coordinates of the ray-object hit point (used in texture mapping).
+    double u, v;
 };

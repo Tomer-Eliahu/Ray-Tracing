@@ -133,6 +133,13 @@ static struct BVH_Node *BVH_construct_sub_tree(struct BVH_Node *prime_arr, int s
 {
 
     struct BVH_Node *root_node = malloc(sizeof(struct BVH_Node));
+    if (root_node == NULL)
+    {
+        fprintf(stderr, "Could not malloc BVH node in BVH_construct_sub_tree!\n");
+        fflush(stderr);
+        exit(EXIT_FAILURE);
+    }
+
     root_node->node_type = (enum Node_Type)COMPOSITE;
 
     // We can speed up the BVH optimization a bit more. Instead of choosing a random splitting axis,

@@ -113,9 +113,9 @@ void ray_color(color3 color, const struct Ray *ray, int depth, const struct BVH_
         struct Ray scattered;
         color3 attenuation;
 
-        switch (rec.mat_cfg->mat)
+        switch (rec.mat_cfg->which)
         {
-        case (enum Material)Lambertian:
+        case (enum Which_Material)Lambertian:
             if (lambertian_scatter(ray, &rec, attenuation, &scattered))
             {
                 ray_color(color, &scattered, depth - 1, world);
@@ -131,7 +131,7 @@ void ray_color(color3 color, const struct Ray *ray, int depth, const struct BVH_
 
             break;
 
-        case (enum Material)Metal:
+        case (enum Which_Material)Metal:
 
             if (metal_scatter(ray, &rec, attenuation, &scattered))
             {
@@ -148,7 +148,7 @@ void ray_color(color3 color, const struct Ray *ray, int depth, const struct BVH_
 
             break;
 
-        case (enum Material)Dielectric:
+        case (enum Which_Material)Dielectric:
 
             if (dielectric_scatter(ray, &rec, attenuation, &scattered))
             {

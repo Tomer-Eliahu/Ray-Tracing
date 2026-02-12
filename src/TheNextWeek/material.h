@@ -2,6 +2,36 @@
 
 #include "vec3.h"
 #include "hittable.h"
+#include "texture.h"
+
+struct Lamertian
+{
+    struct Texture *tex;
+};
+
+struct Metal
+{
+    /// @brief Albedo is the measure of a surface's reflectivity,
+    /// representing the fraction of sunlight (or other radiation) that is reflected,
+    /// ranging from 0 (no reflection, black) to 1 (total reflection, white).
+    /// Note that this is done across RGB (color3) as opposed to the x-y-z axes.
+    color3 albedo;
+    double fuzz; //< Controls how fuzzy the reflection is (only for Metal).
+};
+
+struct Dielectric
+{
+    /// Refractive index in vacuum or air, or the ratio of the material's refractive index over
+    /// the refractive index of the enclosing media
+    double refraction_index;
+};
+
+union Material
+{
+    struct Lamertian lambertian;
+    struct Metal metal;
+    struct Dielectric dielectric;
+};
 
 /*
 
@@ -13,29 +43,18 @@ can also vary with incident viewing direction (the direction of the incoming ray
 
 */
 
-enum Material
+enum Which_Material
 {
     Lambertian,
     Metal,
     Dielectric,
 };
 
+/// @brief An interface to all materials.
 struct Material_Cfg
 {
-
-    enum Material mat; //< The type of this material
-
-    /// @brief Albedo is the measure of a surface's reflectivity,
-    /// representing the fraction of sunlight (or other radiation) that is reflected,
-    /// ranging from 0 (no reflection, black) to 1 (total reflection, white).
-    /// Note that this is done across RGB (color3) as opposed to the x-y-z axes.
-    color3 albedo;
-    double fuzz; //< Controls how fuzzy the reflection is (only for Metal).
-
-    /// (For dielectric)
-    /// Refractive index in vacuum or air, or the ratio of the material's refractive index over
-    /// the refractive index of the enclosing media
-    double refraction_index;
+    enum Which_Material which;
+    union Material object;
 };
 
 /// @brief Lambertian (diffuse) material reflectance
@@ -63,7 +82,7 @@ bool lambertian_scatter(const struct Ray *r_in, const struct Hit_Record *rec,
     memcpy(scattered->origin, rec->p, 3 * sizeof(double));
     scattered->tm = r_in->tm;
 
-    memcpy(attenuation, rec->mat_cfg->albedo, 3 * sizeof(double));
+    tex_value(attenuation, rec->mat_cfg->object.lambertian.tex, rec->u, rec->v, rec->p);
     return true;
 }
 
@@ -84,13 +103,13 @@ bool metal_scatter(const struct Ray *r_in, const struct Hit_Record *rec,
     vec3 fuzz_applied;
     random_unit_vector(fuzz_applied);
     add(reflected, unit(reflected, reflected),
-        scale(fuzz_applied, fuzz_applied, rec->mat_cfg->fuzz));
+        scale(fuzz_applied, fuzz_applied, rec->mat_cfg->object.metal.fuzz));
 
     memcpy(scattered->origin, rec->p, 3 * sizeof(double));
     memcpy(scattered->direction, reflected, 3 * sizeof(double));
     scattered->tm = r_in->tm;
 
-    memcpy(attenuation, rec->mat_cfg->albedo, 3 * sizeof(double));
+    memcpy(attenuation, rec->mat_cfg->object.metal.albedo, 3 * sizeof(double));
 
     // Return true only if we scatter above the surface (adding fuzz may mean we scatter below it).
     // If we scatter below, we simply will absorb the incoming ray.
@@ -128,7 +147,9 @@ bool dielectric_scatter(const struct Ray *r_in, const struct Hit_Record *rec,
     attenuation[1] = 1.0;
     attenuation[2] = 1.0;
 
-    double ri = rec->front_face ? (1.0 / rec->mat_cfg->refraction_index) : rec->mat_cfg->refraction_index;
+    double refraction_index = rec->mat_cfg->object.dielectric.refraction_index;
+
+    double ri = rec->front_face ? (1.0 / refraction_index) : refraction_index;
 
     vec3 unit_direction;
     unit(unit_direction, (double *)r_in->direction);
