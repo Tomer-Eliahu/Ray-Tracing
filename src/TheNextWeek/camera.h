@@ -27,8 +27,12 @@ struct Camera_Config
     /// we change the focus distance and, corresponding to this angle, resize the defocus disk (the lens).
     /// Also note that defocus blur is sometimes called depth of field.
     /// See section 13 (Defocus Blur) for more details.
+    /// @remark Set to 0 to disable defocus blur.
     double defocus_angle;
-    double focus_dist; //< Distance from camera lookfrom point to plane of perfect focus
+
+    /// @brief Distance from camera lookfrom point to plane of perfect focus. *Must not be zero*.
+    /// Has default value of 10.0 in the books.
+    double focus_dist;
 };
 
 /// @brief Store derived camera information.

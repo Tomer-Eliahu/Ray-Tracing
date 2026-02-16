@@ -12,6 +12,20 @@
 /// If we write past the end of an array with this size, the OS throws an exception for us.
 #define MAX_WORLD_LENGTH 500
 
+enum Scene
+{
+    BOUNCING_SPHERES,
+    CHECKERED_SPHERES,
+    EARTH
+};
+
+/// Which scene to render
+#define SCENE_SELECT EARTH
+
+#ifndef SCENE_SELECT
+#error "SCENE_SELECT must be defined!"
+#endif
+
 /// Enable truly random results that vary from run to run.
 #define WANT_TRUE_RANDOM
 
@@ -19,13 +33,8 @@
 #include <time.h>
 #endif
 
-int main()
+void bouncing_spheres()
 {
-
-#ifdef WANT_TRUE_RANDOM
-    // Seed the random number generator (which rand() uses) with the current time.
-    srand((unsigned int)time(NULL));
-#endif
 
     /*
         We will render images (run build\theNextWeek.exe > image.ppm).
@@ -80,8 +89,8 @@ int main()
                     vec_rand_zero_to_one(temp1);
                     vec_rand_zero_to_one(temp2);
 
-                    struct Material_Cfg new_mat = {.which = Lambertian, 
-                        .object.lambertian.tex = malloc(sizeof(struct Texture))};
+                    struct Material_Cfg new_mat = {.which = Lambertian,
+                                                   .object.lambertian.tex = malloc(sizeof(struct Texture))};
                     new_mat.object.lambertian.tex->which = SOLID_COLOR;
                     multiply(new_mat.object.lambertian.tex->object.sct.albedo, temp1, temp2);
                     materials[additonal_materials] = new_mat;
@@ -159,22 +168,6 @@ int main()
                                .radius = 1.0,
                                .mat_cfg = &material3}};
 
-    struct Camera_Config cam =
-        {
-            .aspect_ratio = 16.0 / 9.0,
-            .image_width = 400,
-            .samples_per_pixel = 100,
-            .max_depth = 50,
-
-            .vfov = 20,
-            .lookfrom = {13, 2, 3},
-            .lookat = {0, 0, 0},
-            .vup = {0, 1, 0},
-
-            .defocus_angle = 0.6,
-            .focus_dist = 10.0,
-        };
-
     // Initilize bounding boxes for the Spheres. We do it all here just for readability.
     for (int i = 0; i < actual_world_len; i++)
     {
@@ -194,7 +187,181 @@ int main()
     // as we need it for the rest of the program's duration anyhow.
     struct BVH_Node *world_tree = BVH_construct_tree(world, actual_world_len);
 
-    camera_render(world_tree, &cam);
+    struct Camera_Config cam =
+        {
+            .aspect_ratio = 16.0 / 9.0,
+            .image_width = 400,
+            .samples_per_pixel = 100,
+            .max_depth = 50,
 
-    return 0;
+            .vfov = 20,
+            .lookfrom = {13, 2, 3},
+            .lookat = {0, 0, 0},
+            .vup = {0, 1, 0},
+
+            .defocus_angle = 0.6,
+            .focus_dist = 10.0,
+        };
+
+    camera_render(world_tree, &cam);
+}
+
+/// @brief Two checkered spheres, one on top of the other.
+void checkered_spheres()
+{
+
+    // World
+
+    // Textures
+
+    struct Texture checker_texture = {.which = CHECKER};
+    make_checker_from_colors(&checker_texture.object.checker, 0.32,
+                             (color3){0.2, 0.3, 0.1}, (color3){0.9, 0.9, 0.9});
+
+    // Materials
+
+    const struct Material_Cfg material = {.which = Lambertian,
+                                          .object.lambertian.tex = &checker_texture};
+
+    int actual_world_len = 2;
+    struct Hittable world[actual_world_len];
+    world[0] =
+        (struct Hittable){.which = (enum Which_Hittable)Sphere,
+                          .object.sphere =
+                              {.center =
+                                   (struct Ray){.origin = {0.0, -10.0, 0.0}, .direction = {0}},
+                               .radius = 10.0,
+                               .mat_cfg = &material}};
+
+    world[1] =
+        (struct Hittable){.which = (enum Which_Hittable)Sphere,
+                          .object.sphere =
+                              {.center =
+                                   (struct Ray){.origin = {0.0, 10.0, 0.0}, .direction = {0}},
+                               .radius = 10.0,
+                               .mat_cfg = &material}};
+
+    // Initilize bounding boxes for the Spheres. We do it here just for readability.
+    for (int i = 0; i < actual_world_len; i++)
+    {
+        if (is_zero(world[i].object.sphere.center.direction))
+        {
+            // Static Sphere
+            sphere_static_bound(&world[i].object.sphere);
+        }
+        else
+        {
+            // Moving Sphere
+            sphere_moving_bound(&world[i].object.sphere);
+        }
+    }
+
+    // We rely on the OS to cleanup the malloced memory
+    // as we need it for the rest of the program's duration anyhow.
+    struct BVH_Node *world_tree = BVH_construct_tree(world, actual_world_len);
+
+    struct Camera_Config cam =
+        {
+            .aspect_ratio = 16.0 / 9.0,
+            .image_width = 400,
+            .samples_per_pixel = 100,
+            .max_depth = 50,
+
+            .vfov = 20,
+            .lookfrom = {13, 2, 3},
+            .lookat = {0, 0, 0},
+            .vup = {0, 1, 0},
+
+            .defocus_angle = 0,
+            .focus_dist = 10.0, // This is the default value.
+        };
+
+    camera_render(world_tree, &cam);
+}
+
+void earth()
+{
+    // World
+
+    // Textures
+
+    struct Texture earth_texture = {.which = IMAGE};
+    image_tex_init(&earth_texture.object.img, "earthmap.jpg");
+
+    // Materials
+
+    const struct Material_Cfg earth_surface = {.which = Lambertian,
+                                               .object.lambertian.tex = &earth_texture};
+
+    int actual_world_len = 1;
+    struct Hittable world[actual_world_len];
+    // The globe
+    world[0] = (struct Hittable){.which = Sphere,
+                                 .object.sphere =
+                                     {.center = {.origin = {0}, .direction = {0}},
+                                      .radius = 2.0,
+                                      .mat_cfg = &earth_surface}};
+
+    // Initilize bounding boxes for the Spheres. We do it here just for readability.
+    for (int i = 0; i < actual_world_len; i++)
+    {
+        if (is_zero(world[i].object.sphere.center.direction))
+        {
+            // Static Sphere
+            sphere_static_bound(&world[i].object.sphere);
+        }
+        else
+        {
+            // Moving Sphere
+            sphere_moving_bound(&world[i].object.sphere);
+        }
+    }
+
+    // We rely on the OS to cleanup the malloced memory
+    // as we need it for the rest of the program's duration anyhow.
+    struct BVH_Node *world_tree = BVH_construct_tree(world, actual_world_len);
+
+    struct Camera_Config cam =
+        {
+            .aspect_ratio = 16.0 / 9.0,
+            .image_width = 400,
+            .samples_per_pixel = 100,
+            .max_depth = 50,
+
+            .vfov = 20,
+            .lookfrom = {0, 0, 12},
+            .lookat = {0, 0, 0},
+            .vup = {0, 1, 0},
+
+            .defocus_angle = 0,
+            .focus_dist = 10.0, // This is the default value.
+        };
+
+    camera_render(world_tree, &cam);
+}
+
+int main()
+{
+
+#ifdef WANT_TRUE_RANDOM
+    // Seed the random number generator (which rand() uses) with the current time.
+    srand((unsigned int)time(NULL));
+#endif
+
+    switch (SCENE_SELECT)
+    {
+    case (enum Scene)BOUNCING_SPHERES:
+        bouncing_spheres();
+        break;
+    case (enum Scene)CHECKERED_SPHERES:
+        checkered_spheres();
+        break;
+    case (enum Scene)EARTH:
+        earth();
+        break;
+    default:
+        fprintf(stderr, "Invalid scene selection!\n");
+        fflush(stderr);
+        break;
+    }
 }

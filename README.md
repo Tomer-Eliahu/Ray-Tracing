@@ -10,7 +10,7 @@ I chose using C instead of C++ (what the books suggest using) or Rust as I wante
 The rendered images are in the images folder.
 We use the ppm format of writing some numbers to a file to describe the image.
 
-You can use https://jumpshare.com/viewer/ppm to view the image (no download needed)
+You can use https://jumpshare.com/viewer/ppm to view the images (no download needed)
 or this [VS Code extension] (what I used).
 
 

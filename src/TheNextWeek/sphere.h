@@ -2,8 +2,7 @@
 
 #include "hittable.h"
 #include "hittable_list.h"
-#include "vec3.h"
-#include "ray.h"
+#include "rtweekend.h"
 #include "material.h"
 #include "aabb.h"
 
@@ -79,6 +78,26 @@ void sphere_set_face_normal(const struct Ray *ray,
     rec->front_face ? memcpy(rec->normal, outward_normal, 3 * sizeof(double)) : negate(rec->normal, (double *)outward_normal);
 }
 
+/// @brief Compute uv texture coordinates.
+/// @param p a given point on the sphere of radius one, centered at the origin.
+/// @param u returned value [0,1] of angle around the Y axis from X=-1(from -X to +Z to +X to -Z back to -X).
+/// @param v returned value [0,1] of angle from Y=-1 to Y=+1.
+/// @example <1 0 0> yields <0.50 0.50>
+/// @example <-1  0  0> yields <0.00 0.50>
+/// @example <0 1 0> yields <0.50 1.00>
+/// @example < 0 -1  0> yields <0.50 0.00>
+/// @example <0 0 1> yields <0.25 0.50>
+/// @example < 0  0 -1> yields <0.75 0.50>
+/// @remark atan2(0,0) is assumed to be defined as 0 by the implementation.
+void get_sphere_uv(const point3 p, double *u, double *v)
+{
+    double theta = acos(-p[1]);           // acos(-y)
+    double phi = atan2(-p[2], p[0]) + pi; // atan2(-z, x) + pi
+
+    *u = phi / (2 * pi);
+    *v = theta / pi;
+}
+
 /// @brief detect if the ray hits the sphere (and updates the hit record)
 /// @param ray
 /// @param ray_interval
@@ -126,6 +145,8 @@ bool sphere_hit(const struct Sphere *sphere, const struct Ray *ray, struct Inter
           subtract(rec->normal, rec->p, current_center), (1 / sphere->radius));
 
     sphere_set_face_normal(ray, outward_normal, rec);
+
+    get_sphere_uv(outward_normal, &rec->u, &rec->v);
 
     // Copy a pointer to the Material_Cfg this Sphere has. We won't use the hit record to change the material.
     rec->mat_cfg = (struct Material_Cfg *)sphere->mat_cfg;

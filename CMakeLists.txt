@@ -3,8 +3,8 @@ project(RayTracing VERSION 0.1.0 LANGUAGES C)
 
 #Use C23
 
-set(C_STANDARD 23)
-set(CMAKE_C_STANDARD_REQUIRED True)
+set(CMAKE_C_STANDARD 23)
+set(CMAKE_C_STANDARD_REQUIRED ON)
 
 
 # I looked at https://github.com/RayTracing/raytracing.github.io/blob/release/CMakeLists.txt
@@ -12,6 +12,10 @@ set(CMAKE_C_STANDARD_REQUIRED True)
 # I did not look at the source code.
 
 # Sources
+
+set ( EXTERNAL
+  src/external/stb_image.h
+)
 
 set ( SOURCE_ONE_WEEKEND
   src/InOneWeekend/main.c
@@ -54,4 +58,4 @@ include_directories(src)
 # Executables
 
 add_executable(inOneWeekend      ${SOURCE_ONE_WEEKEND})
-add_executable(theNextWeek       ${SOURCE_NEXT_WEEK})
+add_executable(theNextWeek       ${EXTERNAL} ${SOURCE_NEXT_WEEK})

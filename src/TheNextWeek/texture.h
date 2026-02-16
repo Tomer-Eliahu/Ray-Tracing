@@ -29,6 +29,7 @@ we also provide the position of the point in question, for reasons that will bec
 */
 
 #include "rtweekend.h"
+#include "rtw_stb_image.h"
 
 // Forward declaration.
 struct Texture;
@@ -101,21 +102,67 @@ void checker_value(color3 ret, const struct Checker_Tex *tex, double u, double v
     isEven ? tex_value(ret, tex->even, u, v, p) : tex_value(ret, tex->odd, u, v, p);
 }
 
+/// @brief An image texture. **Must** be initilized by calling image_tex_init(image_filename)!
+struct Image_Tex
+{
+    struct Image_Info info;
+};
+
+void image_tex_init(struct Image_Tex *tex, const char *image_filename)
+{
+    // Setting the value according to the book.
+    tex->info.bytes_per_pixel = 3;
+    rtw_image(&tex->info, image_filename);
+}
+
+void image_value(color3 ret, const struct Image_Tex *tex, double u, double v, [[maybe_unused]] const point3 p)
+{
+    const struct Image_Info *image_info = &tex->info;
+    // If we have no texture data, then return solid blue as a debugging aid.
+    if (image_get_height(image_info) <= 0)
+    {
+        ret[0] = 0;
+        ret[1] = 0;
+        ret[2] = 1;
+        return;
+    }
+
+    // Clamp input texture coordinates to [0,1] x [1,0]
+    const struct Interval zero_one = {.min = 0, .max = 1};
+    u = interval_clamp(&zero_one, u);
+
+    // Flip V to image coordinates. In (u,v): v increases going up (y up system).
+    // But in image coordinates the height increases as you go down from the top left of the image (y down system).
+    v = 1.0 - interval_clamp(&zero_one, v);
+
+    int i = (int)(u * image_get_width(image_info));
+    int j = (int)(v * image_get_height(image_info));
+    const unsigned char *pixel = pixel_data(image_info, i, j);
+
+    double color_scale = 1.0 / 255.0;
+    ret[0] = color_scale * pixel[0];
+    ret[1] = color_scale * pixel[1];
+    ret[2] = color_scale * pixel[2];
+}
+
 // We need a generic interfacte to all textures
 
 enum Which_Tex
 {
     SOLID_COLOR,
-    CHECKER
+    CHECKER,
+    IMAGE
 };
 
 union Tex_Object
 {
     struct Solid_Color_Tex sct; //< Solid Color Texture.
     struct Checker_Tex checker;
+    struct Image_Tex img;
 };
 
-/// @brief An interface to all textures
+/// @brief An interface to all textures. Please consult the underlying type (e.g. struct Image_Tex) docs
+/// for insturctions on how to initilize that type.
 struct Texture
 {
     enum Which_Tex which;
@@ -136,6 +183,10 @@ void tex_value(color3 ret, const struct Texture *tex, double u, double v, const 
 
     case (enum Which_Tex)CHECKER:
         checker_value(ret, &tex->object.checker, u, v, p);
+        break;
+
+    case (enum Which_Tex)IMAGE:
+        image_value(ret, &tex->object.img, u, v, p);
         break;
 
     default:
