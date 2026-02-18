@@ -29,6 +29,7 @@ we also provide the position of the point in question, for reasons that will bec
 */
 
 #include "rtweekend.h"
+#include "perlin.h"
 #include "rtw_stb_image.h"
 
 // Forward declaration.
@@ -145,13 +146,52 @@ void image_value(color3 ret, const struct Image_Tex *tex, double u, double v, [[
     ret[2] = color_scale * pixel[2];
 }
 
+// A Perlin Noise Texture (Book 2 Section 5). **Must** be initilized by calling noise_tex_init()!
+struct Noise_Tex
+{
+    struct Perlin_Info noise;
+    double scale; //< Scale the input point to make the texture vary more quickly
+};
+
+/// @brief Init a Perlin noise texture.
+/// @param scale By what to scale the input point
+/// (the bigger the scale, the more quickly the texture will vary). This is also called the frequency of the noise.
+static inline void noise_tex_init(struct Noise_Tex *tex, double scale)
+{
+    tex->scale = scale;
+    perlin(&tex->noise);
+}
+
+/// @brief Returns a random grey color.
+static inline void noise_value(color3 ret, const struct Noise_Tex *tex,
+                               [[maybe_unused]] double u, [[maybe_unused]] double v, const point3 p)
+{
+    double scale_factor = 1.0 + sin(tex->scale * p[2] + 10.0 * turb(&tex->noise, p, 7));
+    scale(ret, (color3){0.5, 0.5, 0.5}, scale_factor);
+}
+
+/*OLD noise_value (using the noise function directly):
+point3 scaled_point;
+scale(scaled_point, (double *)p, tex->scale);
+
+
+    The output of the Perlin interpolation function (which is the output of the noise function)
+    can return negative values.
+    These negative values will later be passed to our linear_to_gamma() color function,
+    which expects only positive inputs. To mitigate this, we'll map the [−1,+1]
+    range of values to [0,1]
+
+scale(ret, (color3){1, 1, 1}, 0.5 * (1.0 + noise(&tex->noise, scaled_point)));
+*/
+
 // We need a generic interfacte to all textures
 
 enum Which_Tex
 {
     SOLID_COLOR,
     CHECKER,
-    IMAGE
+    IMAGE,
+    NOISE
 };
 
 union Tex_Object
@@ -159,6 +199,7 @@ union Tex_Object
     struct Solid_Color_Tex sct; //< Solid Color Texture.
     struct Checker_Tex checker;
     struct Image_Tex img;
+    struct Noise_Tex noise;
 };
 
 /// @brief An interface to all textures. Please consult the underlying type (e.g. struct Image_Tex) docs
@@ -187,6 +228,10 @@ void tex_value(color3 ret, const struct Texture *tex, double u, double v, const 
 
     case (enum Which_Tex)IMAGE:
         image_value(ret, &tex->object.img, u, v, p);
+        break;
+
+    case (enum Which_Tex)NOISE:
+        noise_value(ret, &tex->object.noise, u, v, p);
         break;
 
     default:

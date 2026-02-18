@@ -16,11 +16,12 @@ enum Scene
 {
     BOUNCING_SPHERES,
     CHECKERED_SPHERES,
-    EARTH
+    EARTH,
+    PERLIN_SPHERES
 };
 
 /// Which scene to render
-#define SCENE_SELECT EARTH
+#define SCENE_SELECT PERLIN_SPHERES
 
 #ifndef SCENE_SELECT
 #error "SCENE_SELECT must be defined!"
@@ -223,7 +224,7 @@ void checkered_spheres()
     const struct Material_Cfg material = {.which = Lambertian,
                                           .object.lambertian.tex = &checker_texture};
 
-    int actual_world_len = 2;
+    const int actual_world_len = 2;
     struct Hittable world[actual_world_len];
     world[0] =
         (struct Hittable){.which = (enum Which_Hittable)Sphere,
@@ -293,7 +294,7 @@ void earth()
     const struct Material_Cfg earth_surface = {.which = Lambertian,
                                                .object.lambertian.tex = &earth_texture};
 
-    int actual_world_len = 1;
+    const int actual_world_len = 1;
     struct Hittable world[actual_world_len];
     // The globe
     world[0] = (struct Hittable){.which = Sphere,
@@ -340,6 +341,73 @@ void earth()
     camera_render(world_tree, &cam);
 }
 
+void perlin_spheres()
+{
+
+    // World
+
+    // Textures
+
+    struct Texture per_text = {.which = NOISE};
+    noise_tex_init(&per_text.object.noise, 4.0);
+
+    // Materials
+
+    const struct Material_Cfg mat = {.which = Lambertian,
+                                     .object.lambertian.tex = &per_text};
+
+    const int actual_world_len = 2;
+    struct Hittable world[actual_world_len];
+    world[0] = (struct Hittable){.which = Sphere,
+                                 .object.sphere =
+                                     {.center = {.origin = {0, -1000, 0}, .direction = {0}},
+                                      .radius = 1000,
+                                      .mat_cfg = &mat}};
+
+    world[1] = (struct Hittable){.which = Sphere,
+                                 .object.sphere =
+                                     {.center = {.origin = {0, 2, 0}, .direction = {0}},
+                                      .radius = 2.0,
+                                      .mat_cfg = &mat}};
+
+    // Initilize bounding boxes for the Spheres.
+    for (int i = 0; i < actual_world_len; i++)
+    {
+        if (is_zero(world[i].object.sphere.center.direction))
+        {
+            // Static Sphere
+            sphere_static_bound(&world[i].object.sphere);
+        }
+        else
+        {
+            // Moving Sphere
+            sphere_moving_bound(&world[i].object.sphere);
+        }
+    }
+
+    // We rely on the OS to cleanup the malloced memory
+    // as we need it for the rest of the program's duration anyhow.
+    struct BVH_Node *world_tree = BVH_construct_tree(world, actual_world_len);
+
+    struct Camera_Config cam =
+        {
+            .aspect_ratio = 16.0 / 9.0,
+            .image_width = 400,
+            .samples_per_pixel = 100,
+            .max_depth = 50,
+
+            .vfov = 20,
+            .lookfrom = {13, 2, 3},
+            .lookat = {0, 0, 0},
+            .vup = {0, 1, 0},
+
+            .defocus_angle = 0,
+            .focus_dist = 10.0, // This is the default value.
+        };
+
+    camera_render(world_tree, &cam);
+}
+
 int main()
 {
 
@@ -358,6 +426,9 @@ int main()
         break;
     case (enum Scene)EARTH:
         earth();
+        break;
+    case (enum Scene)PERLIN_SPHERES:
+        perlin_spheres();
         break;
     default:
         fprintf(stderr, "Invalid scene selection!\n");

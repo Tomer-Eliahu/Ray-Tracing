@@ -256,7 +256,7 @@ void sample_square(vec3 vec)
 {
     vec[0] = random_zero_to_one() - 0.5;
     vec[1] = random_zero_to_one() - 0.5;
-    vec[3] = 0;
+    vec[2] = 0;
 }
 
 /// @brief Sets point to a random point in the camera defocus disk.
