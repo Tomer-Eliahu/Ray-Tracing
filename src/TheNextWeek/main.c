@@ -169,7 +169,7 @@ void bouncing_spheres()
                                .radius = 1.0,
                                .mat_cfg = &material3}};
 
-    // Initilize bounding boxes for the Spheres. We do it all here just for readability.
+    // Initialize bounding boxes for the Spheres. We do it all here just for readability.
     for (int i = 0; i < actual_world_len; i++)
     {
         if (is_zero(world[i].object.sphere.center.direction))
@@ -242,7 +242,7 @@ void checkered_spheres()
                                .radius = 10.0,
                                .mat_cfg = &material}};
 
-    // Initilize bounding boxes for the Spheres. We do it here just for readability.
+    // Initialize bounding boxes for the Spheres. We do it here just for readability.
     for (int i = 0; i < actual_world_len; i++)
     {
         if (is_zero(world[i].object.sphere.center.direction))
@@ -303,7 +303,7 @@ void earth()
                                       .radius = 2.0,
                                       .mat_cfg = &earth_surface}};
 
-    // Initilize bounding boxes for the Spheres. We do it here just for readability.
+    // Initialize bounding boxes for the Spheres. We do it here just for readability.
     for (int i = 0; i < actual_world_len; i++)
     {
         if (is_zero(world[i].object.sphere.center.direction))
@@ -370,7 +370,7 @@ void perlin_spheres()
                                       .radius = 2.0,
                                       .mat_cfg = &mat}};
 
-    // Initilize bounding boxes for the Spheres.
+    // Initialize bounding boxes for the Spheres.
     for (int i = 0; i < actual_world_len; i++)
     {
         if (is_zero(world[i].object.sphere.center.direction))

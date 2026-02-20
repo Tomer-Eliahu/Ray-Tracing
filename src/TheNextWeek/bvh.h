@@ -197,10 +197,10 @@ static struct BVH_Node *BVH_construct_sub_tree(struct BVH_Node *prime_arr, int s
 }
 
 /// @brief Constructs and returns a pointer to the root node of a BVH tree. Uses **malloc**.
-/// @param world The list of all hittable objects in the world. Their bounding boxes must already be initilized!
+/// @param world The list of all hittable objects in the world. Their bounding boxes must already be initialized!
 /// @param world_length The exact number of hittable objects in the world.
 /// @remark world length must be at least one.
-/// @remark **The bounding boxes of the hittable objects must already be initilized!!!**
+/// @remark **The bounding boxes of the hittable objects must already be initialized!!!**
 struct BVH_Node *BVH_construct_tree(const struct Hittable *world, int world_length)
 {
 

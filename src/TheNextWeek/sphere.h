@@ -20,13 +20,13 @@ struct Sphere
     const struct Material_Cfg *mat_cfg; //< The material config for the material the sphere is made from.
 
     /// @brief The bounding box over the sphere.
-    /// @remark For a stationary sphere, initilize it by calling sphere_static_bound.
-    /// @remark For a moving sphere, initilize it by calling sphere_moving_bound.
+    /// @remark For a stationary sphere, initialize it by calling sphere_static_bound.
+    /// @remark For a moving sphere, initialize it by calling sphere_moving_bound.
     struct AABB bbox;
 };
 
-/// @brief Initilizes the bounding box for a *stationary* sphere.
-/// @remark Must have radius and center.origin initilized before this call!
+/// @brief Initializes the bounding box for a *stationary* sphere.
+/// @remark Must have radius and center.origin initialized before this call!
 void sphere_static_bound(struct Sphere *sphere)
 {
     vec3 rvec = {sphere->radius, sphere->radius, sphere->radius};
@@ -36,9 +36,9 @@ void sphere_static_bound(struct Sphere *sphere)
     aabb_from_points(&sphere->bbox, sub_res, add_res);
 }
 
-/// @brief Initilizes the bounding box for a *moving* sphere.
+/// @brief Initializes the bounding box for a *moving* sphere.
 /// This is be the bounds over the entire range of motion, from time=0 to time=1.
-/// @remark Must have radius and center (both origin and direction) initilized before this call!
+/// @remark Must have radius and center (both origin and direction) initialized before this call!
 void sphere_moving_bound(struct Sphere *sphere)
 {
     // To do this, we can take the box of the sphere at time=0,
@@ -98,7 +98,7 @@ void get_sphere_uv(const point3 p, double *u, double *v)
     *v = theta / pi;
 }
 
-/// @brief detect if the ray hits the sphere (and updates the hit record)
+/// @brief Detect if the ray hits the sphere (and updates the hit record)
 /// @param ray
 /// @param ray_interval
 /// @param rec the Hit_Record
