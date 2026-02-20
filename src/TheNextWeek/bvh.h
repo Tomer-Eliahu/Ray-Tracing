@@ -117,6 +117,11 @@ bool BVH_node_hit(const struct BVH_Node *node, const struct Ray *r, struct Inter
             return sphere_hit(&node->hittable_object->object.sphere, r, ray_t, rec);
             break;
 
+        case (enum Which_Hittable)Quad:
+
+            return quad_hit(&node->hittable_object->object.quad, r, ray_t, rec);
+            break;
+
         default:
             fprintf(stderr, "Could not identify Hittable!\n");
             fflush(stderr);
@@ -220,6 +225,12 @@ struct BVH_Node *BVH_construct_tree(const struct Hittable *world, int world_leng
         {
         case (enum Which_Hittable)Sphere:
             arr[world_index] = (struct BVH_Node){.bbox = world[world_index].object.sphere.bbox,
+                                                 .node_type = (enum Node_Type)PRIME,
+                                                 .hittable_object = &world[world_index]};
+            break;
+
+        case (enum Which_Hittable)Quad:
+            arr[world_index] = (struct BVH_Node){.bbox = world[world_index].object.quad.bbox,
                                                  .node_type = (enum Node_Type)PRIME,
                                                  .hittable_object = &world[world_index]};
             break;

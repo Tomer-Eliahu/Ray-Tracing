@@ -21,3 +21,17 @@ struct Hit_Record
     /// @remark An example of such a mapping is in section 4.4 in Book 2.
     double u, v;
 };
+
+/// @brief Sets the hit record normal vector. Note this will set rec->normal to have unit length.
+/// @param ray
+/// @param outward_normal Assumed to have unit length!
+/// @param rec
+void set_face_normal(const struct Ray *ray,
+                     const vec3 outward_normal, struct Hit_Record *rec)
+{
+    // The dot product will be positive if the ray goes in the same direction of the outward normal.
+    // This happens (for example) if the ray travels from inside the sphere out.
+    rec->front_face = dot(ray->direction, outward_normal) < 0;
+    // We make sure the normal always goes against the ray
+    rec->front_face ? memcpy(rec->normal, outward_normal, 3 * sizeof(double)) : negate(rec->normal, (double *)outward_normal);
+}

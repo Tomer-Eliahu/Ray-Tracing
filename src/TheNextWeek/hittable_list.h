@@ -3,6 +3,7 @@
 #include "hittable.h"
 #include "vec3.h"
 #include "sphere.h"
+#include "quad.h"
 
 /// @brief An enum of all possible hittable objects (we can then have an array of the type [Hittable]
 /// for a list of hittalbe objects).
@@ -10,12 +11,14 @@
 /// [Hittable]: https://github.com/Tomer-Eliahu/Ray-Tracing/blob/main/src/InOneWeekend/hittable_list.h
 enum Which_Hittable
 {
-    Sphere
+    Sphere,
+    Quad
 };
 
 union Hittable_Object
 {
     struct Sphere sphere;
+    struct Quad quad;
 };
 
 struct Hittable

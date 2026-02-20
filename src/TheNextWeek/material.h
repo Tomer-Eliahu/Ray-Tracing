@@ -97,7 +97,7 @@ bool metal_scatter(const struct Ray *r_in, const struct Hit_Record *rec,
     vec3 reflected;
     reflect(reflected, (double *)r_in->direction, rec->normal);
 
-    // In order for the fuzz sphere to make sense,
+    // In order for the fuzz to make sense,
     // it needs to be consistently scaled compared to the reflection vector,
     // we thus normalize the reflected ray.
     vec3 fuzz_applied;

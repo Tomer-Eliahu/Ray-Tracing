@@ -51,7 +51,8 @@ static inline double interval_clamp(const struct Interval *interval, double x)
 
 /// @brief Expand an interval by a delta (pad it by delta/2 each way).
 /// @param ret The new padded interval.
-void interval_expand(struct Interval *ret, const struct Interval *interval, double delta)
+/// @remark Note that ret can potentially be equal to interval (this would mean we modify the interval in place).
+void interval_expand(struct Interval *ret, struct Interval *interval, double delta)
 {
     double padding = delta / 2;
     ret->min = interval->min - padding;

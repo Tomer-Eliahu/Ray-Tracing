@@ -50,7 +50,9 @@ that an n-dimensional AABB is just the intersection of n axis-aligned intervals,
 #include "rtweekend.h"
 #include "assert.h"
 
-/// @brief An Axis-Aligned Bounding Box
+/// @brief An Axis-Aligned Bounding Box. If making an AABB in a way other than aabb_from_boxes, padding
+/// is added (if needed) to ensure the resulting bbox has a non-zero volume (we do this in aabb_from_points).
+/// If init an AABB directly, please call the padding function pad_to_minimums to ensure this yourself.
 struct AABB
 {
     struct Interval x, y, z;
@@ -62,10 +64,27 @@ struct AABB
 #define AABB_UNIVERSE \
     (struct AABB) { .x = INTERVAL_UNIVERSE, .y = INTERVAL_UNIVERSE, .z = INTERVAL_UNIVERSE }
 
+/// @brief Adjust the AABB so that no side is narrower than some delta, padding if *necessary*.
+void pad_to_minimums(struct AABB *ret)
+{
+    static const double delta = 0.0001;
+
+    if (interval_size(&ret->x) < delta)
+        interval_expand(&ret->x, &ret->x, delta);
+
+    if (interval_size(&ret->y) < delta)
+        interval_expand(&ret->y, &ret->y, delta);
+
+    if (interval_size(&ret->z) < delta)
+        interval_expand(&ret->z, &ret->z, delta);
+}
+
 /// @brief Make an AABB from 2 points.
 /// That is treat the two points a and b as extrema for the bounding box, so we don't require a
 /// particular minimum/maximum coordinate order.
-/// @param ret A pointer to the AABB to be initilized.
+/// @param ret A pointer to the AABB to be initialized.
+/// @remark Adds padding (if needed) to make sure our bounding boxes will always
+/// have a non-zero volume even for quadrilaterals (quads).
 void aabb_from_points(struct AABB *ret, const point3 a, const point3 b)
 {
     ret->x =
@@ -74,6 +93,8 @@ void aabb_from_points(struct AABB *ret, const point3 a, const point3 b)
         (a[1] <= b[1]) ? (struct Interval){.min = a[1], .max = b[1]} : (struct Interval){.min = b[1], .max = a[1]};
     ret->z =
         (a[2] <= b[2]) ? (struct Interval){.min = a[2], .max = b[2]} : (struct Interval){.min = b[2], .max = a[2]};
+
+    pad_to_minimums(ret);
 }
 
 /// @brief Make an AABB from 2 boxes (that encloses the two input boxes).

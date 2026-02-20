@@ -63,21 +63,6 @@ void sphere_moving_bound(struct Sphere *sphere)
     aabb_from_boxes(&sphere->bbox, &box0, &box1);
 }
 
-/// @brief Sets the hit record normal vector. Note this will set rec->normal to have unit length.
-/// @param ray
-/// @param outward_normal Assumed to have unit length!
-/// @param rec
-void sphere_set_face_normal(const struct Ray *ray,
-                            const vec3 outward_normal, struct Hit_Record *rec)
-{
-
-    // The dot product will be positive if the ray goes in the same direction of the outward normal.
-    // This happens if the ray travels from inside the sphere out.
-    rec->front_face = dot(ray->direction, outward_normal) < 0;
-    // We make sure the normal always goes against the ray
-    rec->front_face ? memcpy(rec->normal, outward_normal, 3 * sizeof(double)) : negate(rec->normal, (double *)outward_normal);
-}
-
 /// @brief Compute uv texture coordinates.
 /// @param p a given point on the sphere of radius one, centered at the origin.
 /// @param u returned value [0,1] of angle around the Y axis from X=-1(from -X to +Z to +X to -Z back to -X).
@@ -144,7 +129,7 @@ bool sphere_hit(const struct Sphere *sphere, const struct Ray *ray, struct Inter
     scale(outward_normal,
           subtract(rec->normal, rec->p, current_center), (1 / sphere->radius));
 
-    sphere_set_face_normal(ray, outward_normal, rec);
+    set_face_normal(ray, outward_normal, rec);
 
     get_sphere_uv(outward_normal, &rec->u, &rec->v);
 

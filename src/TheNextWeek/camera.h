@@ -2,7 +2,6 @@
 
 #include "hittable.h"
 #include "hittable_list.h"
-#include "sphere.h"
 #include "rtweekend.h"
 #include "material.h"
 #include "bvh.h"
@@ -54,6 +53,8 @@ struct Camera_Info
 
 We also changed the signatures of ray_color and camera_render below
 from using const struct Hittable *world to using const struct BVH *world.
+
+#include "sphere.h"
 
 /// @brief returns if any objects in the world are hit by the ray
 /// @param world an array of hittable objects

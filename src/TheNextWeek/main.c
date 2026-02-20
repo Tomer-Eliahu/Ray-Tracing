@@ -4,6 +4,7 @@
 #include "hittable.h"
 #include "hittable_list.h"
 #include "sphere.h"
+#include "quad.h"
 #include "material.h"
 #include "bvh.h"
 #include "texture.h"
@@ -17,11 +18,12 @@ enum Scene
     BOUNCING_SPHERES,
     CHECKERED_SPHERES,
     EARTH,
-    PERLIN_SPHERES
+    PERLIN_SPHERES,
+    QUADS,
 };
 
 /// Which scene to render
-#define SCENE_SELECT PERLIN_SPHERES
+#define SCENE_SELECT QUADS
 
 #ifndef SCENE_SELECT
 #error "SCENE_SELECT must be defined!"
@@ -408,6 +410,78 @@ void perlin_spheres()
     camera_render(world_tree, &cam);
 }
 
+void quads()
+{
+    // World
+
+    // Textures
+
+    struct Texture red = {.which = SOLID_COLOR, .object.sct.albedo = {1.0, 0.2, 0.2}};
+    struct Texture green = {.which = SOLID_COLOR, .object.sct.albedo = {0.2, 1.0, 0.2}};
+    struct Texture blue = {.which = SOLID_COLOR, .object.sct.albedo = {0.2, 0.2, 1.0}};
+    struct Texture orange = {.which = SOLID_COLOR, .object.sct.albedo = {1.0, 0.5, 0.0}};
+    struct Texture teal = {.which = SOLID_COLOR, .object.sct.albedo = {0.2, 0.8, 0.8}};
+
+    // Materials
+
+    const struct Material_Cfg left_red = {.which = Lambertian, .object.lambertian.tex = &red};
+    const struct Material_Cfg back_green = {.which = Lambertian, .object.lambertian.tex = &green};
+    const struct Material_Cfg right_blue = {.which = Lambertian, .object.lambertian.tex = &blue};
+    const struct Material_Cfg upper_orange = {.which = Lambertian, .object.lambertian.tex = &orange};
+    const struct Material_Cfg lower_teal = {.which = Lambertian, .object.lambertian.tex = &teal};
+
+    const int actual_world_len = 5;
+    struct Hittable world[actual_world_len];
+
+    world[0] = (struct Hittable){.which = Quad,
+                                 .object.quad =
+                                     {.Q = {-3, -2, 5}, .u = {0, 0, -4}, .v = {0, 4, 0}, .mat_cfg = &left_red}};
+
+    world[1] = (struct Hittable){.which = Quad,
+                                 .object.quad =
+                                     {.Q = {-2, -2, 0}, .u = {4, 0, 0}, .v = {0, 4, 0}, .mat_cfg = &back_green}};
+
+    world[2] = (struct Hittable){.which = Quad,
+                                 .object.quad =
+                                     {.Q = {3, -2, 1}, .u = {0, 0, 4}, .v = {0, 4, 0}, .mat_cfg = &right_blue}};
+
+    world[3] = (struct Hittable){.which = Quad,
+                                 .object.quad =
+                                     {.Q = {-2, 3, 1}, .u = {4, 0, 0}, .v = {0, 0, 4}, .mat_cfg = &upper_orange}};
+
+    world[4] = (struct Hittable){.which = Quad,
+                                 .object.quad =
+                                     {.Q = {-2, -3, 5}, .u = {4, 0, 0}, .v = {0, 0, -4}, .mat_cfg = &lower_teal}};
+
+    // Initialize bounding boxes for the quads.
+    for (int i = 0; i < actual_world_len; i++)
+    {
+        quad_init(&world[i].object.quad);
+    }
+
+    // We rely on the OS to cleanup the malloced memory
+    // as we need it for the rest of the program's duration anyhow.
+    struct BVH_Node *world_tree = BVH_construct_tree(world, actual_world_len);
+
+    struct Camera_Config cam =
+        {
+            .aspect_ratio = 1.0,
+            .image_width = 400,
+            .samples_per_pixel = 100,
+            .max_depth = 50,
+
+            .vfov = 80,
+            .lookfrom = {0, 0, 9},
+            .lookat = {0, 0, 0},
+            .vup = {0, 1, 0},
+
+            .defocus_angle = 0,
+            .focus_dist = 10.0, // This is the default value.
+        };
+
+    camera_render(world_tree, &cam);
+}
+
 int main()
 {
 
@@ -429,6 +503,9 @@ int main()
         break;
     case (enum Scene)PERLIN_SPHERES:
         perlin_spheres();
+        break;
+    case (enum Scene)QUADS:
+        quads();
         break;
     default:
         fprintf(stderr, "Invalid scene selection!\n");
