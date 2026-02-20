@@ -24,3 +24,17 @@ I converted some images from ppm to png, so they can be displayed here:
   <img src="images\20_book_one_final_render.png" alt="Book One Final Render"/>
   Book One Final Render
 </p>
+
+<p align="center">
+  <img src="images\31_perlin_noise_marbled_texture.png" alt="Book 2: Perlin Noise Marbled Texture"/>
+</p>
+<p align="center">
+  Book 2: Perlin Noise Marbled Texture
+</p>
+
+<p align="center">
+  <img src="images\32_quads.png" alt="Book 2: Quadrilaterals"/>
+</p>
+<p align="center">
+  Book 2: Quadrilaterals
+</p>
