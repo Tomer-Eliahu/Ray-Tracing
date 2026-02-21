@@ -26,11 +26,18 @@ struct Dielectric
     double refraction_index;
 };
 
+/// @brief A material which emits light.
+struct Diffuse_Light
+{
+    struct Texture *tex;
+};
+
 union Material
 {
     struct Lamertian lambertian;
     struct Metal metal;
     struct Dielectric dielectric;
+    struct Diffuse_Light light;
 };
 
 /*
@@ -48,6 +55,7 @@ enum Which_Material
     Lambertian,
     Metal,
     Dielectric,
+    Light,
 };
 
 /// @brief An interface to all materials.
@@ -173,4 +181,10 @@ bool dielectric_scatter(const struct Ray *r_in, const struct Hit_Record *rec,
     scattered->tm = r_in->tm;
 
     return true;
+}
+
+/// @brief Returns the light emitted by the Diffuse_Light material.
+static inline void emitted(color3 ret, const struct Diffuse_Light *light, double u, double v, const point3 p)
+{
+    tex_value(ret, light->tex, u, v, p);
 }

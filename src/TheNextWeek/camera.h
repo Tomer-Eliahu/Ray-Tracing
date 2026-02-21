@@ -12,6 +12,7 @@ struct Camera_Config
     int image_width;       //< Rendered image width in pixel count
     int samples_per_pixel; //< Count of random samples for each pixel
     int max_depth;         //< Maximum number of ray bounces into scene
+    color3 background;     //< Scene background color
     double vfov;           //< Vertical view angle (field of view) in degrees. This is effectively our zoom in/out.
     point3 lookfrom;       //< Point camera is looking from
     point3 lookat;         //< Point camera is looking at
@@ -97,8 +98,10 @@ bool world_hit(const struct Hittable *world, int world_length, const struct Ray 
 }
 */
 
-///@brief sets the color for a given scene ray
-void ray_color(color3 color, const struct Ray *ray, int depth, const struct BVH_Node *world)
+///@brief Sets the color for a given scene ray.
+///@param color This color will be set by this function.
+void ray_color(color3 color, const struct Ray *ray, int depth,
+               const struct BVH_Node *world, const struct Camera_Config *cfg)
 {
     // If we've exceeded the ray bounce limit, no more light is gathered.
     if (depth <= 0)
@@ -121,10 +124,14 @@ void ray_color(color3 color, const struct Ray *ray, int depth, const struct BVH_
         switch (rec.mat_cfg->which)
         {
         case (enum Which_Material)Lambertian:
+
             if (lambertian_scatter(ray, &rec, attenuation, &scattered))
             {
-                ray_color(color, &scattered, depth - 1, world);
+                ray_color(color, &scattered, depth - 1, world, cfg);
                 multiply(color, attenuation, color);
+
+                // Note the book returns return color_from_emission + color_from_scatter;
+                // But for all materials other than light color_from_emission is 0,0,0.
                 return;
             }
 
@@ -140,7 +147,7 @@ void ray_color(color3 color, const struct Ray *ray, int depth, const struct BVH_
 
             if (metal_scatter(ray, &rec, attenuation, &scattered))
             {
-                ray_color(color, &scattered, depth - 1, world);
+                ray_color(color, &scattered, depth - 1, world, cfg);
                 multiply(color, attenuation, color);
                 return;
             }
@@ -157,7 +164,7 @@ void ray_color(color3 color, const struct Ray *ray, int depth, const struct BVH_
 
             if (dielectric_scatter(ray, &rec, attenuation, &scattered))
             {
-                ray_color(color, &scattered, depth - 1, world);
+                ray_color(color, &scattered, depth - 1, world, cfg);
                 multiply(color, attenuation, color);
                 return;
             }
@@ -170,6 +177,13 @@ void ray_color(color3 color, const struct Ray *ray, int depth, const struct BVH_
 
             break;
 
+        case (enum Which_Material)Light:
+
+            emitted(color, &rec.mat_cfg->object.light, rec.u, rec.v, rec.p);
+            return;
+
+            break;
+
         default:
             fprintf(stderr, "Could not identify Material of object hit!\n");
             fflush(stderr);
@@ -177,17 +191,27 @@ void ray_color(color3 color, const struct Ray *ray, int depth, const struct BVH_
         }
     }
 
-    vec3 unit_dir;
+    // If the ray hits nothing, return the background color.
+    memcpy(color, cfg->background, sizeof(double) * 3);
 
-    // We know that this use won't actually modify ray->direction
-    unit(unit_dir, (double *)ray->direction);
+    /*OLD Approach instead of uniform background color:
+        You could always pass in a boolean to switch between
+        the previous skybox code versus the new solid color background.
 
-    double a = 0.5 * (unit_dir[1] + 1.0);
-    // white is (1.0, 1.0, 1.0) and blue is (0.5, 0.7, 1.0);
-    // We want a linear interpolation where the bottom is white and the top is blue.
-    color[0] = (1.0 - a) * 1 + a * 0.5;
-    color[1] = (1.0 - a) * 1 + a * 0.7;
-    color[2] = (1.0 - a) * 1 + a * 1;
+    blue to white gradient:
+
+        vec3 unit_dir;
+
+        // We know that this use won't actually modify ray->direction
+        unit(unit_dir, (double *)ray->direction);
+
+        double a = 0.5 * (unit_dir[1] + 1.0);
+        // white is (1.0, 1.0, 1.0) and blue is (0.5, 0.7, 1.0);
+        // We want a linear interpolation where the bottom is white and the top is blue.
+        color[0] = (1.0 - a) * 1 + a * 0.5;
+        color[1] = (1.0 - a) * 1 + a * 0.7;
+        color[2] = (1.0 - a) * 1 + a * 1;
+    */
 }
 
 /// @brief Derive Camera_Info from the camera config.
@@ -339,7 +363,7 @@ void camera_render(const struct BVH_Node *world, const struct Camera_Config *cfg
                 get_ray(&r, &cam_info, i, j, cfg->defocus_angle);
 
                 color3 temp;
-                ray_color(temp, &r, cfg->max_depth, world);
+                ray_color(temp, &r, cfg->max_depth, world, cfg);
                 add(pixel_color, pixel_color, temp);
             }
 

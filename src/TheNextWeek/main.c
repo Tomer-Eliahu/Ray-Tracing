@@ -20,10 +20,12 @@ enum Scene
     EARTH,
     PERLIN_SPHERES,
     QUADS,
+    SIMPLE_LIGHT,
+    CORNELL_BOX
 };
 
 /// Which scene to render
-#define SCENE_SELECT QUADS
+#define SCENE_SELECT CORNELL_BOX
 
 #ifndef SCENE_SELECT
 #error "SCENE_SELECT must be defined!"
@@ -196,6 +198,7 @@ void bouncing_spheres()
             .image_width = 400,
             .samples_per_pixel = 100,
             .max_depth = 50,
+            .background = {0.70, 0.80, 1.00},
 
             .vfov = 20,
             .lookfrom = {13, 2, 3},
@@ -269,6 +272,7 @@ void checkered_spheres()
             .image_width = 400,
             .samples_per_pixel = 100,
             .max_depth = 50,
+            .background = {0.70, 0.80, 1.00},
 
             .vfov = 20,
             .lookfrom = {13, 2, 3},
@@ -330,6 +334,7 @@ void earth()
             .image_width = 400,
             .samples_per_pixel = 100,
             .max_depth = 50,
+            .background = {0.70, 0.80, 1.00},
 
             .vfov = 20,
             .lookfrom = {0, 0, 12},
@@ -397,6 +402,7 @@ void perlin_spheres()
             .image_width = 400,
             .samples_per_pixel = 100,
             .max_depth = 50,
+            .background = {0.70, 0.80, 1.00},
 
             .vfov = 20,
             .lookfrom = {13, 2, 3},
@@ -469,10 +475,179 @@ void quads()
             .image_width = 400,
             .samples_per_pixel = 100,
             .max_depth = 50,
+            .background = {0.70, 0.80, 1.00},
 
             .vfov = 80,
             .lookfrom = {0, 0, 9},
             .lookat = {0, 0, 0},
+            .vup = {0, 1, 0},
+
+            .defocus_angle = 0,
+            .focus_dist = 10.0, // This is the default value.
+        };
+
+    camera_render(world_tree, &cam);
+}
+
+void simple_light()
+{
+
+    // World
+
+    // Textures
+
+    struct Texture per_text = {.which = NOISE};
+    noise_tex_init(&per_text.object.noise, 4.0);
+
+    // Note that the light is brighter than (1,1,1). This allows it to be bright enough to light things.
+    struct Texture diff_light_tex = {.which = SOLID_COLOR, .object.sct.albedo = {4, 4, 4}};
+
+    // Materials
+
+    const struct Material_Cfg per_mat = {.which = Lambertian,
+                                         .object.lambertian.tex = &per_text};
+    const struct Material_Cfg light_mat = {.which = Light, .object.light.tex = &diff_light_tex};
+
+    const int actual_world_len = 4;
+    struct Hittable world[actual_world_len];
+    world[0] = (struct Hittable){.which = Sphere,
+                                 .object.sphere =
+                                     {.center = {.origin = {0, -1000, 0}, .direction = {0}},
+                                      .radius = 1000,
+                                      .mat_cfg = &per_mat}};
+
+    world[1] = (struct Hittable){.which = Sphere,
+                                 .object.sphere =
+                                     {.center = {.origin = {0, 2, 0}, .direction = {0}},
+                                      .radius = 2.0,
+                                      .mat_cfg = &per_mat}};
+
+    world[2] = (struct Hittable){.which = Quad,
+                                 .object.quad =
+                                     {.Q = {3, 1, -2}, .u = {2, 0, 0}, .v = {0, 2, 0}, .mat_cfg = &light_mat}};
+
+    world[3] = (struct Hittable){.which = Sphere,
+                                 .object.sphere =
+                                     {.center = {.origin = {0, 7, 0}, .direction = {0}},
+                                      .radius = 2.0,
+                                      .mat_cfg = &light_mat}};
+
+    // Init bounding boxes
+    sphere_static_bound(&world[0].object.sphere);
+    sphere_static_bound(&world[1].object.sphere);
+    quad_init(&world[2].object.quad);
+    sphere_static_bound(&world[3].object.sphere);
+
+    // We rely on the OS to cleanup the malloced memory
+    // as we need it for the rest of the program's duration anyhow.
+    struct BVH_Node *world_tree = BVH_construct_tree(world, actual_world_len);
+
+    struct Camera_Config cam =
+        {
+            .aspect_ratio = 16.0 / 9.0,
+            .image_width = 400,
+            .samples_per_pixel = 100,
+            .max_depth = 50,
+            .background = {0, 0, 0}, // black
+
+            .vfov = 20,
+            .lookfrom = {26, 3, 6},
+            .lookat = {0, 2, 0},
+            .vup = {0, 1, 0},
+
+            .defocus_angle = 0,
+            .focus_dist = 10.0, // This is the default value.
+        };
+
+    camera_render(world_tree, &cam);
+}
+
+/// @brief The “Cornell Box” was introduced in 1984 to model the interaction of light between diffuse surfaces.
+/// An empty Cornell Box has just 5 walls and a light.
+void cornell_box()
+{
+    // World
+
+    // Textures
+
+    struct Texture red = {.which = SOLID_COLOR, .object.sct.albedo = {.65, .05, .05}};
+    struct Texture white = {.which = SOLID_COLOR, .object.sct.albedo = {.73, .73, .73}};
+    struct Texture green = {.which = SOLID_COLOR, .object.sct.albedo = {.12, .45, .15}};
+    // Note that the light is brighter than (1,1,1). This allows it to be bright enough to light things.
+    struct Texture diff_light_tex = {.which = SOLID_COLOR, .object.sct.albedo = {15, 15, 15}};
+
+    // Materials
+
+    const struct Material_Cfg red_mat = {.which = Lambertian, .object.lambertian.tex = &red};
+    const struct Material_Cfg white_mat = {.which = Lambertian, .object.lambertian.tex = &white};
+    const struct Material_Cfg green_mat = {.which = Lambertian, .object.lambertian.tex = &green};
+    const struct Material_Cfg light_mat = {.which = Light, .object.light.tex = &diff_light_tex};
+
+    const int actual_world_len = 6;
+    struct Hittable world[actual_world_len];
+
+    world[0] = (struct Hittable){.which = Quad,
+                                 .object.quad =
+                                     {.Q = {555, 0, 0},
+                                      .u = {0, 555, 0},
+                                      .v = {0, 0, 555},
+                                      .mat_cfg = &green_mat}};
+
+    world[1] = (struct Hittable){.which = Quad,
+                                 .object.quad =
+                                     {.Q = {0, 0, 0},
+                                      .u = {0, 555, 0},
+                                      .v = {0, 0, 555},
+                                      .mat_cfg = &red_mat}};
+
+    world[2] = (struct Hittable){.which = Quad,
+                                 .object.quad =
+                                     {.Q = {343, 554, 332},
+                                      .u = {-130, 0, 0},
+                                      .v = {0, 0, -105},
+                                      .mat_cfg = &light_mat}};
+
+    world[3] = (struct Hittable){.which = Quad,
+                                 .object.quad =
+                                     {.Q = {0, 0, 0},
+                                      .u = {555, 0, 0},
+                                      .v = {0, 0, 555},
+                                      .mat_cfg = &white_mat}};
+
+    world[4] = (struct Hittable){.which = Quad,
+                                 .object.quad =
+                                     {.Q = {555, 555, 555},
+                                      .u = {-555, 0, 0},
+                                      .v = {0, 0, -555},
+                                      .mat_cfg = &white_mat}};
+    world[5] = (struct Hittable){.which = Quad,
+                                 .object.quad =
+                                     {.Q = {0, 0, 555},
+                                      .u = {555, 0, 0},
+                                      .v = {0, 555, 0},
+                                      .mat_cfg = &white_mat}};
+
+    // Initialize bounding boxes for the quads.
+    for (int i = 0; i < actual_world_len; i++)
+    {
+        quad_init(&world[i].object.quad);
+    }
+
+    // We rely on the OS to cleanup the malloced memory
+    // as we need it for the rest of the program's duration anyhow.
+    struct BVH_Node *world_tree = BVH_construct_tree(world, actual_world_len);
+
+    struct Camera_Config cam =
+        {
+            .aspect_ratio = 1.0,
+            .image_width = 600,
+            .samples_per_pixel = 200,
+            .max_depth = 50,
+            .background = {0, 0, 0},
+
+            .vfov = 40,
+            .lookfrom = {278, 278, -800},
+            .lookat = {278, 278, 0},
             .vup = {0, 1, 0},
 
             .defocus_angle = 0,
@@ -506,6 +681,12 @@ int main()
         break;
     case (enum Scene)QUADS:
         quads();
+        break;
+    case (enum Scene)SIMPLE_LIGHT:
+        simple_light();
+        break;
+    case (enum Scene)CORNELL_BOX:
+        cornell_box();
         break;
     default:
         fprintf(stderr, "Invalid scene selection!\n");

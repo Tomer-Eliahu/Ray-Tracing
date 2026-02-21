@@ -134,8 +134,8 @@ bool quad_hit(const struct Quad *quad, const struct Ray *ray, struct Interval ra
 
     // Ray hits the 2D shape; set the rest of the hit record and return true.
 
-    // Update rec->p to the point of intersection of the ray and the plane that contains the quad.
-    memcpy(&rec->p, intersection, sizeof(double) * 3);
+    // Update rec->p to the point of intersection of the ray and the quad.
+    memcpy(rec->p, intersection, sizeof(double) * 3);
 
     rec->t = t;
     // Copy a pointer to the Material_Cfg this quad has. We won't use the hit record to change the material.
