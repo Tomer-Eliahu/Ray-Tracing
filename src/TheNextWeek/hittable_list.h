@@ -421,7 +421,8 @@ struct Hittable *world_add_box(const point3 a, const point3 b, const struct Mate
 /// @remark Because of how we implemented translation and rotation, the order here **matters**.
 /// That is rotating and then translating is different than translating and then rotating.
 /// That is because offsetting the incoming ray and then rotating it is different than first rotating it,
-/// and then translating it.
+/// and then translating it (because we are rotating relative to the world's y-axis so we are drastically 
+/// changing the position of objects when doing so as opposed to rotating each object relative to its own y-axis).
 struct Hittable *world_add_box_rotated_translated(const point3 a, const point3 b,
                                                   const struct Material_Cfg *mat, const vec3 offset, double angle)
 {
