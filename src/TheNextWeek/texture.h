@@ -237,6 +237,7 @@ void tex_value(color3 ret, const struct Texture *tex, double u, double v, const 
     default:
         fprintf(stderr, "Could not identify Texture!\n");
         fflush(stderr);
+        exit(EXIT_FAILURE);
         break;
     }
 }

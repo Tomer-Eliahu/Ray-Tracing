@@ -187,6 +187,7 @@ void ray_color(color3 color, const struct Ray *ray, int depth,
         default:
             fprintf(stderr, "Could not identify Material of object hit!\n");
             fflush(stderr);
+            exit(EXIT_FAILURE);
             break;
         }
     }

@@ -226,3 +226,13 @@ static bool inline is_zero(const vec3 vec)
 {
     return (vec[0] == 0) && (vec[1] == 0) && (vec[2] == 0);
 }
+
+/// @brief rotate vec about the y-axis using cos_theta and sin_theta.
+/// @remark Note that ret can NOT be equal to vec.
+static inline double *vec_rotate(vec3 ret, const vec3 vec, double cos_theta, double sin_theta)
+{
+    ret[0] = (cos_theta * vec[0]) - (sin_theta * vec[2]);
+    ret[1] = vec[1];
+    ret[2] = (sin_theta * vec[0]) + (cos_theta * vec[2]);
+    return ret;
+}

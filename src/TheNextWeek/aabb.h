@@ -64,6 +64,14 @@ struct AABB
 #define AABB_UNIVERSE \
     (struct AABB) { .x = INTERVAL_UNIVERSE, .y = INTERVAL_UNIVERSE, .z = INTERVAL_UNIVERSE }
 
+/// @brief Makes ret be the bounding box made by offseting bbox by offset.
+void bbox_offset(struct AABB *ret, const struct AABB *bbox, const vec3 offset)
+{
+    interval_add(&ret->x, &bbox->x, offset[0]);
+    interval_add(&ret->y, &bbox->y, offset[1]);
+    interval_add(&ret->z, &bbox->z, offset[2]);
+}
+
 /// @brief Adjust the AABB so that no side is narrower than some delta, padding if *necessary*.
 void pad_to_minimums(struct AABB *ret)
 {

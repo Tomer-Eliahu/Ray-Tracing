@@ -110,23 +110,7 @@ bool BVH_node_hit(const struct BVH_Node *node, const struct Ray *r, struct Inter
     {
         // Meaning this is a PRIME node
         // Test if we actually hit the hittable (as opposed to its bounding box)
-        switch (node->hittable_object->which)
-        {
-        case (enum Which_Hittable)Sphere:
-
-            return sphere_hit(&node->hittable_object->object.sphere, r, ray_t, rec);
-            break;
-
-        case (enum Which_Hittable)Quad:
-
-            return quad_hit(&node->hittable_object->object.quad, r, ray_t, rec);
-            break;
-
-        default:
-            fprintf(stderr, "Could not identify Hittable!\n");
-            fflush(stderr);
-            break;
-        }
+        return object_hit(node->hittable_object, r, ray_t, rec);
     }
 }
 
@@ -235,9 +219,22 @@ struct BVH_Node *BVH_construct_tree(const struct Hittable *world, int world_leng
                                                  .hittable_object = &world[world_index]};
             break;
 
+        case (enum Which_Hittable)Translate:
+            arr[world_index] = (struct BVH_Node){.bbox = world[world_index].object.translate.bbox,
+                                                 .node_type = (enum Node_Type)PRIME,
+                                                 .hittable_object = &world[world_index]};
+            break;
+
+        case (enum Which_Hittable)Rotate_y:
+            arr[world_index] = (struct BVH_Node){.bbox = world[world_index].object.rotate_y.bbox,
+                                                 .node_type = (enum Node_Type)PRIME,
+                                                 .hittable_object = &world[world_index]};
+            break;
+
         default:
             fprintf(stderr, "Could not identify Hittable in BVH_construct_tree function!\n");
             fflush(stderr);
+            exit(EXIT_FAILURE);
             break;
         }
     }

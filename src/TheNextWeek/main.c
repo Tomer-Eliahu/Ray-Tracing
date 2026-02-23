@@ -583,8 +583,8 @@ void cornell_box()
     const struct Material_Cfg green_mat = {.which = Lambertian, .object.lambertian.tex = &green};
     const struct Material_Cfg light_mat = {.which = Light, .object.light.tex = &diff_light_tex};
 
-    const int actual_world_len = 6;
-    struct Hittable world[actual_world_len];
+    int actual_world_len = 6;
+    struct Hittable world[MAX_WORLD_LENGTH];
 
     world[0] = (struct Hittable){.which = Quad,
                                  .object.quad =
@@ -627,11 +627,27 @@ void cornell_box()
                                       .v = {0, 555, 0},
                                       .mat_cfg = &white_mat}};
 
-    // Initialize bounding boxes for the quads.
+    // Initialize bounding boxes for these 6 quads.
     for (int i = 0; i < actual_world_len; i++)
     {
         quad_init(&world[i].object.quad);
     }
+
+    struct Hittable *box1 = world_add_box_rotated_translated((point3){0, 0, 0}, (point3){165, 330, 165},
+                                                             &white_mat,
+                                                             (vec3){265, 0, 295}, 15);
+
+    // Copy box1 (just the final 6 quads post operations) into world
+    memcpy(&world[actual_world_len], &box1[12], sizeof(struct Hittable) * 6);
+    actual_world_len += 6;
+
+    struct Hittable *box2 = world_add_box_rotated_translated((point3){0, 0, 0}, (point3){165, 165, 165},
+                                                             &white_mat,
+                                                             (vec3){130, 0, 65}, -18);
+
+    // Copy box2 (just the final 6 quads post operations) into world
+    memcpy(&world[actual_world_len], &box2[12], sizeof(struct Hittable) * 6);
+    actual_world_len += 6;
 
     // We rely on the OS to cleanup the malloced memory
     // as we need it for the rest of the program's duration anyhow.

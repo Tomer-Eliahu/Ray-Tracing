@@ -71,3 +71,10 @@ void interval_enclose(struct Interval *ret, const struct Interval *a, const stru
 
 #define INTERVAL_UNIVERSE \
     (struct Interval) { .min = -infinity, .max = infinity }
+
+/// @brief Makes ret equal to the interval that is made by displacing the ival interval by displacement.
+static inline void interval_add(struct Interval *ret, const struct Interval *ival, double displacement)
+{
+    ret->min = ival->min + displacement;
+    ret->max = ival->max + displacement;
+}

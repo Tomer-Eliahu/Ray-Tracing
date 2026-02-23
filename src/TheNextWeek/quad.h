@@ -147,6 +147,14 @@ bool quad_hit(const struct Quad *quad, const struct Ray *ray, struct Interval ra
 }
 
 /*
+NOTE: Book 2 puts the function
+    inline shared_ptr<hittable_list> box(const point3& a, const point3& b, shared_ptr<material> mat)
+    which for us is world_add_box(struct Hittable *world, int start,
+                                 const point3 a, const point3 b, const struct Material_Cfg *mat)
+    which I think should be in hittable_list.h for us.
+*/
+
+/*
 /// @remark For a moving quad, initialize it by calling quad_set_moving_bounding_box.
 
 /// @brief Initializes the bounding box for a *moving* quad.
