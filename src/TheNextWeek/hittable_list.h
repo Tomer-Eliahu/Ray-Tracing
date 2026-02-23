@@ -4,6 +4,7 @@
 #include "vec3.h"
 #include "sphere.h"
 #include "quad.h"
+#include "constant_medium.h"
 
 /*Book 2: Section 8.1: Instance Translation.
 
@@ -81,6 +82,7 @@ enum Which_Hittable
     Quad,
     Translate,
     Rotate_y,
+    Constant_Medium,
 };
 
 union Hittable_Object
@@ -89,6 +91,7 @@ union Hittable_Object
     struct Quad quad;
     struct Translate translate;
     struct Rotate_y rotate_y;
+    struct Constant_Medium cm;
 };
 
 struct Hittable
@@ -135,6 +138,10 @@ void tran_init(struct Translate *tran)
     case (enum Which_Hittable)Rotate_y:
 
         underlying_bbox = &tran->tran_object->object.rotate_y.bbox;
+        break;
+
+    case (enum Which_Hittable)Constant_Medium:
+        underlying_bbox = &tran->tran_object->object.cm.bbox;
         break;
 
     default:
@@ -206,6 +213,10 @@ void rotate_init(struct Rotate_y *rot, double angle)
     case (enum Which_Hittable)Rotate_y:
 
         underlying_bbox = &rot->rotate_object->object.rotate_y.bbox;
+        break;
+
+    case (enum Which_Hittable)Constant_Medium:
+        underlying_bbox = &rot->rotate_object->object.cm.bbox;
         break;
 
     default:
@@ -320,6 +331,11 @@ bool object_hit(const struct Hittable *h_object, const struct Ray *r, struct Int
         return rotate_hit(&h_object->object.rotate_y, r, ray_t, rec);
         break;
 
+    case (enum Which_Hittable)Constant_Medium:
+
+        return cm_hit(&h_object->object.cm, r, ray_t, rec);
+        break;
+
     default:
         fprintf(stderr, "Could not identify Hittable in object_hit!\n");
         fflush(stderr);
@@ -421,8 +437,11 @@ struct Hittable *world_add_box(const point3 a, const point3 b, const struct Mate
 /// @remark Because of how we implemented translation and rotation, the order here **matters**.
 /// That is rotating and then translating is different than translating and then rotating.
 /// That is because offsetting the incoming ray and then rotating it is different than first rotating it,
-/// and then translating it (because we are rotating relative to the world's y-axis so we are drastically 
+/// and then translating it (because we are rotating relative to the world's y-axis so we are drastically
 /// changing the position of objects when doing so as opposed to rotating each object relative to its own y-axis).
+/// Think of a rectangle in 2D centered at (2,0), we rotate 90 degrees counter-clockwise and then translate it down
+/// 2 units so it is now centered at the origin. This is different then first moving it 2 units down (so it is
+/// centered at (2,-2)), and then rotating it. The result would not be centered at the origin.
 struct Hittable *world_add_box_rotated_translated(const point3 a, const point3 b,
                                                   const struct Material_Cfg *mat, const vec3 offset, double angle)
 {

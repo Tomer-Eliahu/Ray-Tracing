@@ -4,7 +4,7 @@
 #include "hittable.h"
 #include "texture.h"
 
-struct Lamertian
+struct Lambertian
 {
     struct Texture *tex;
 };
@@ -32,12 +32,19 @@ struct Diffuse_Light
     struct Texture *tex;
 };
 
+/// @brief A material which scatters rays that hit it in a uniform (3D) random direction.
+struct Isotropic
+{
+    struct Texture *tex;
+};
+
 union Material
 {
-    struct Lamertian lambertian;
+    struct Lambertian lambertian;
     struct Metal metal;
     struct Dielectric dielectric;
     struct Diffuse_Light light;
+    struct Isotropic isotropic;
 };
 
 /*
@@ -56,6 +63,7 @@ enum Which_Material
     Metal,
     Dielectric,
     Light,
+    Isotropic
 };
 
 /// @brief An interface to all materials.
@@ -180,6 +188,21 @@ bool dielectric_scatter(const struct Ray *r_in, const struct Hit_Record *rec,
     memcpy(scattered->origin, rec->p, 3 * sizeof(double));
     scattered->tm = r_in->tm;
 
+    return true;
+}
+
+/// @brief Isotropic material reflectance
+/// @param r_in Incoming ray
+/// @param attenuation The intensity of light lost
+/// @param scattered The outbound ray from hitting this material
+bool isotropic_scatter(const struct Ray *r_in, const struct Hit_Record *rec,
+                       color3 attenuation, struct Ray *scattered)
+{
+    memcpy(scattered->origin, rec->p, sizeof(double) * 3);
+    random_unit_vector(scattered->direction);
+    scattered->tm = r_in->tm;
+
+    tex_value(attenuation, rec->mat_cfg->object.isotropic.tex, rec->u, rec->v, rec->p);
     return true;
 }
 

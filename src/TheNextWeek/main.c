@@ -8,6 +8,7 @@
 #include "material.h"
 #include "bvh.h"
 #include "texture.h"
+#include "constant_medium.h"
 
 /// How many hittable objects there could possibly be in the world.
 /// If we write past the end of an array with this size, the OS throws an exception for us.
@@ -21,11 +22,12 @@ enum Scene
     PERLIN_SPHERES,
     QUADS,
     SIMPLE_LIGHT,
-    CORNELL_BOX
+    CORNELL_BOX,
+    CORNELL_SMOKE,
 };
 
 /// Which scene to render
-#define SCENE_SELECT CORNELL_BOX
+#define SCENE_SELECT CORNELL_SMOKE
 
 #ifndef SCENE_SELECT
 #error "SCENE_SELECT must be defined!"
@@ -673,6 +675,124 @@ void cornell_box()
     camera_render(world_tree, &cam);
 }
 
+/// @brief If we replace the two blocks with smoke and fog (dark and light particles),
+/// and make the light bigger (and dimmer so it doesn’t blow out the scene) for faster convergence
+void cornell_smoke()
+{
+    // World
+
+    // Textures
+
+    struct Texture red = {.which = SOLID_COLOR, .object.sct.albedo = {.65, .05, .05}};
+    struct Texture white = {.which = SOLID_COLOR, .object.sct.albedo = {.73, .73, .73}};
+    struct Texture green = {.which = SOLID_COLOR, .object.sct.albedo = {.12, .45, .15}};
+    // Note that the light is brighter than (1,1,1). This allows it to be bright enough to light things.
+    struct Texture diff_light_tex = {.which = SOLID_COLOR, .object.sct.albedo = {7, 7, 7}};
+
+    struct Texture smoke = {.which = SOLID_COLOR, .object.sct.albedo = {0, 0, 0}};
+    struct Texture fog = {.which = SOLID_COLOR, .object.sct.albedo = {1, 1, 1}};
+
+    // Materials
+
+    const struct Material_Cfg red_mat = {.which = Lambertian, .object.lambertian.tex = &red};
+    const struct Material_Cfg white_mat = {.which = Lambertian, .object.lambertian.tex = &white};
+    const struct Material_Cfg green_mat = {.which = Lambertian, .object.lambertian.tex = &green};
+    const struct Material_Cfg light_mat = {.which = Light, .object.light.tex = &diff_light_tex};
+
+    const struct Material_Cfg smoke_mat = {.which = Isotropic, .object.isotropic.tex = &smoke};
+    const struct Material_Cfg fog_mat = {.which = Isotropic, .object.isotropic.tex = &fog};
+
+    const int actual_world_len = 8;
+    struct Hittable world[actual_world_len];
+
+    world[0] = (struct Hittable){.which = Quad,
+                                 .object.quad =
+                                     {.Q = {555, 0, 0},
+                                      .u = {0, 555, 0},
+                                      .v = {0, 0, 555},
+                                      .mat_cfg = &green_mat}};
+
+    world[1] = (struct Hittable){.which = Quad,
+                                 .object.quad =
+                                     {.Q = {0, 0, 0},
+                                      .u = {0, 555, 0},
+                                      .v = {0, 0, 555},
+                                      .mat_cfg = &red_mat}};
+
+    world[2] = (struct Hittable){.which = Quad,
+                                 .object.quad =
+                                     {.Q = {113, 554, 127},
+                                      .u = {330, 0, 0},
+                                      .v = {0, 0, 305},
+                                      .mat_cfg = &light_mat}};
+
+    world[3] = (struct Hittable){.which = Quad,
+                                 .object.quad =
+                                     {.Q = {0, 555, 0},
+                                      .u = {555, 0, 0},
+                                      .v = {0, 0, 555},
+                                      .mat_cfg = &white_mat}};
+
+    world[4] = (struct Hittable){.which = Quad,
+                                 .object.quad =
+                                     {.Q = {0, 0, 0},
+                                      .u = {555, 0, 0},
+                                      .v = {0, 0, 555},
+                                      .mat_cfg = &white_mat}};
+    world[5] = (struct Hittable){.which = Quad,
+                                 .object.quad =
+                                     {.Q = {0, 0, 555},
+                                      .u = {555, 0, 0},
+                                      .v = {0, 555, 0},
+                                      .mat_cfg = &white_mat}};
+
+    // Initialize bounding boxes for these 6 quads.
+    for (int i = 0; i < 6; i++)
+    {
+        quad_init(&world[i].object.quad);
+    }
+
+    struct Hittable *box1 = world_add_box_rotated_translated((point3){0, 0, 0}, (point3){165, 330, 165},
+                                                             &white_mat,
+                                                             (vec3){265, 0, 295}, 15);
+    // Make box1 into a smoke (dark particles) volume and have just that *1* object in the world.
+    world[6] = (struct Hittable){.which = Constant_Medium};
+    // Remember box1 is made up of just the final 6 quads (post rotation and translation)
+    cm_init(&world[6].object.cm, &box1[12], 6, 0.01, &smoke_mat);
+
+    struct Hittable *box2 = world_add_box_rotated_translated((point3){0, 0, 0}, (point3){165, 165, 165},
+                                                             &white_mat,
+                                                             (vec3){130, 0, 65}, -18);
+
+    // Make box2 into a fog (light particles) volume and have just that *1* object in the world.
+    world[7] = (struct Hittable){.which = Constant_Medium};
+    // Remember box2 is made up of just the final 6 quads (post rotation and translation)
+    cm_init(&world[7].object.cm, &box2[12], 6, 0.01, &fog_mat);
+
+    // We rely on the OS to cleanup the malloced memory
+    // as we need it for the rest of the program's duration anyhow.
+    struct BVH_Node *world_tree = BVH_construct_tree(world, actual_world_len);
+
+    struct Camera_Config cam =
+        {
+            .aspect_ratio = 1.0,
+            .image_width = 600,
+            .samples_per_pixel = 200,
+            .max_depth = 50,
+            .background = {0, 0, 0},
+
+            .vfov = 40,
+            .lookfrom = {278, 278, -800},
+            .lookat = {278, 278, 0},
+            .vup = {0, 1, 0},
+
+            .defocus_angle = 0,
+            .focus_dist = 10.0, // This is the default value.
+        };
+
+    camera_render(world_tree, &cam);
+}
+
 int main()
 {
 
@@ -703,6 +823,9 @@ int main()
         break;
     case (enum Scene)CORNELL_BOX:
         cornell_box();
+        break;
+    case (enum Scene)CORNELL_SMOKE:
+        cornell_smoke();
         break;
     default:
         fprintf(stderr, "Invalid scene selection!\n");

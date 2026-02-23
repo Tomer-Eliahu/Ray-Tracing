@@ -231,6 +231,12 @@ struct BVH_Node *BVH_construct_tree(const struct Hittable *world, int world_leng
                                                  .hittable_object = &world[world_index]};
             break;
 
+        case (enum Which_Hittable)Constant_Medium:
+            arr[world_index] = (struct BVH_Node){.bbox = world[world_index].object.cm.bbox,
+                                                 .node_type = (enum Node_Type)PRIME,
+                                                 .hittable_object = &world[world_index]};
+            break;
+
         default:
             fprintf(stderr, "Could not identify Hittable in BVH_construct_tree function!\n");
             fflush(stderr);
@@ -240,6 +246,11 @@ struct BVH_Node *BVH_construct_tree(const struct Hittable *world, int world_leng
     }
 
     return BVH_construct_sub_tree(arr, 0, world_length);
+}
+
+static inline void helper_init_cm_bbox(struct Constant_Medium *cm)
+{
+    cm->bbox = cm->boundary->bbox;
 }
 
 /* OLD-- my approach-- does not play very nice with optimizations
