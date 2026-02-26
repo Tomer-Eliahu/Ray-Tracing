@@ -24,10 +24,12 @@ enum Scene
     SIMPLE_LIGHT,
     CORNELL_BOX,
     CORNELL_SMOKE,
+    BOOK2_FINAL_LQ,
+    BOOK2_FINAL_HQ,
 };
 
 /// Which scene to render
-#define SCENE_SELECT CORNELL_SMOKE
+#define SCENE_SELECT BOOK2_FINAL_LQ
 
 #ifndef SCENE_SELECT
 #error "SCENE_SELECT must be defined!"
@@ -793,6 +795,218 @@ void cornell_smoke()
     camera_render(world_tree, &cam);
 }
 
+void book2_final_scene(int image_width, int samples_per_pixel, int max_depth)
+{
+
+    // World
+
+    // Textures
+
+    struct Texture ground_tex = {.which = SOLID_COLOR, .object.sct.albedo = {0.48, 0.83, 0.53}};
+    struct Texture brown_tex = {.which = SOLID_COLOR, .object.sct.albedo = {0.7, 0.3, 0.1}};
+    // Note that the light is brighter than (1,1,1). This allows it to be bright enough to light things.
+    struct Texture diff_light_tex = {.which = SOLID_COLOR, .object.sct.albedo = {7, 7, 7}};
+
+    struct Texture blue_volume = {.which = SOLID_COLOR, .object.sct.albedo = {0.2, 0.4, 0.9}};
+    struct Texture mist = {.which = SOLID_COLOR, .object.sct.albedo = {1, 1, 1}};
+
+    struct Texture earth_texture = {.which = IMAGE};
+    image_tex_init(&earth_texture.object.img, "earthmap.jpg");
+
+    struct Texture per_text = {.which = NOISE};
+    noise_tex_init(&per_text.object.noise, 0.2);
+
+    struct Texture white = {.which = SOLID_COLOR, .object.sct.albedo = {.73, .73, .73}};
+
+    // Materials
+
+    const struct Material_Cfg ground_mat = {.which = Lambertian, .object.lambertian.tex = &ground_tex};
+    const struct Material_Cfg mov_sphere_mat = {.which = Lambertian, .object.lambertian.tex = &brown_tex};
+    const struct Material_Cfg glass = {.which = Dielectric, .object.dielectric.refraction_index = 1.5};
+    const struct Material_Cfg metal = {.which = Metal, .object.metal = {.albedo = {0.8, 0.8, 0.9}, .fuzz = 1.0}};
+    const struct Material_Cfg light_mat = {.which = Light, .object.light.tex = &diff_light_tex};
+    const struct Material_Cfg volume_mat = {.which = Isotropic, .object.isotropic.tex = &blue_volume};
+    const struct Material_Cfg mist_mat = {.which = Isotropic, .object.isotropic.tex = &mist};
+    const struct Material_Cfg earth_surface = {.which = Lambertian, .object.lambertian.tex = &earth_texture};
+    const struct Material_Cfg perlin_mat = {.which = Lambertian, .object.lambertian.tex = &per_text};
+    const struct Material_Cfg white_mat = {.which = Lambertian, .object.lambertian.tex = &white};
+
+    const int boxes_per_side = 20;
+    struct Hittable world[MAX_WORLD_LENGTH];
+
+    // Create the ground
+    for (int i = 0; i < boxes_per_side; i++)
+    {
+        for (int j = 0; j < boxes_per_side; j++)
+        {
+            double w = 100.0;
+            double x0 = -1000.0 + i * w;
+            double z0 = -1000.0 + j * w;
+            double y0 = 0.0;
+            double x1 = x0 + w;
+            double y1 = random_in_range(1, 101);
+            double z1 = z0 + w;
+            struct Hittable *cur_box = world_add_box((point3){x0, y0, z0}, (point3){x1, y1, z1}, &ground_mat);
+            world[(20 * i) + j] = (struct Hittable){.which = Composite_Hittable,
+                                                    .object.comp =
+                                                        {.root =
+                                                             BVH_construct_tree(cur_box, 6)}};
+        }
+    }
+
+    int actual_world_len = boxes_per_side * boxes_per_side;
+
+    // Light
+    world[actual_world_len] =
+        (struct Hittable){.which = Quad,
+                          .object.quad =
+                              {.Q = {123, 554, 147},
+                               .u = {300, 0, 0},
+                               .v = {0, 0, 265},
+                               .mat_cfg = &light_mat}};
+    quad_init(&world[actual_world_len].object.quad);
+    actual_world_len++;
+
+    // Brown moving sphere
+    world[actual_world_len] =
+        (struct Hittable){.which = (enum Which_Hittable)Sphere,
+                          .object.sphere =
+                              {.center =
+                                   (struct Ray){.origin = {400, 400, 200}, .direction = {30, 0, 0}},
+                               .radius = 50.0,
+                               .mat_cfg = &mov_sphere_mat}};
+    sphere_moving_bound(&world[actual_world_len].object.sphere);
+    actual_world_len++;
+
+    // Glass Sphere
+    world[actual_world_len] =
+        (struct Hittable){.which = (enum Which_Hittable)Sphere,
+                          .object.sphere =
+                              {.center =
+                                   (struct Ray){.origin = {260, 150, 45}, .direction = {0, 0, 0}},
+                               .radius = 50.0,
+                               .mat_cfg = &glass}};
+    sphere_static_bound(&world[actual_world_len].object.sphere);
+    actual_world_len++;
+
+    // Metal Sphere
+    world[actual_world_len] =
+        (struct Hittable){.which = (enum Which_Hittable)Sphere,
+                          .object.sphere =
+                              {.center =
+                                   (struct Ray){.origin = {0, 150, 145}, .direction = {0, 0, 0}},
+                               .radius = 50.0,
+                               .mat_cfg = &metal}};
+    sphere_static_bound(&world[actual_world_len].object.sphere);
+    actual_world_len++;
+
+    // Add Glass Sphere with blue volume inside it (we add both the Sphere and the volume to the scene space).
+    // This makes for a blue subsurface reflection sphere.
+    world[actual_world_len] = (struct Hittable){.which = (enum Which_Hittable)Sphere,
+                                                .object.sphere =
+                                                    {.center =
+                                                         (struct Ray){.origin = {360, 150, 145},
+                                                                      .direction = {0, 0, 0}},
+                                                     .radius = 70.0,
+                                                     .mat_cfg = &glass}};
+    sphere_static_bound(&world[actual_world_len].object.sphere);
+    actual_world_len++;
+
+    world[actual_world_len] = (struct Hittable){.which = Constant_Medium};
+    cm_init(&world[actual_world_len].object.cm,
+            &world[actual_world_len - 1], 1, 0.2, &volume_mat);
+    actual_world_len++;
+
+    // Big thin white mist covering everything
+    // Note we do NOT add this boundary to the scene space.
+    struct Hittable boundary[1];
+    boundary[0] = (struct Hittable){.which = (enum Which_Hittable)Sphere,
+                                    .object.sphere =
+                                        {.center =
+                                             (struct Ray){.origin = {0, 0, 0}, .direction = {0, 0, 0}},
+                                         .radius = 5000.0,
+                                         .mat_cfg = &glass}};
+    sphere_static_bound(&boundary[0].object.sphere);
+
+    world[actual_world_len] = (struct Hittable){.which = Constant_Medium};
+    cm_init(&world[actual_world_len].object.cm, boundary, 1, 0.0001, &mist_mat);
+    actual_world_len++;
+
+    // Earth
+    world[actual_world_len] =
+        (struct Hittable){.which = (enum Which_Hittable)Sphere,
+                          .object.sphere =
+                              {.center =
+                                   (struct Ray){.origin = {400, 200, 400}, .direction = {0, 0, 0}},
+                               .radius = 100.0,
+                               .mat_cfg = &earth_surface}};
+    sphere_static_bound(&world[actual_world_len].object.sphere);
+    actual_world_len++;
+
+    // Perlin Noise Sphere
+    world[actual_world_len] =
+        (struct Hittable){.which = (enum Which_Hittable)Sphere,
+                          .object.sphere =
+                              {.center =
+                                   (struct Ray){.origin = {220, 280, 300}, .direction = {0, 0, 0}},
+                               .radius = 80.0,
+                               .mat_cfg = &perlin_mat}};
+    sphere_static_bound(&world[actual_world_len].object.sphere);
+    actual_world_len++;
+
+    // Box made of small white spheres (note this results in only adding 1 entry in our world array)
+    const int ns = 1000;
+    struct Hittable boxes2[ns];
+
+    for (int j = 0; j < ns; j++)
+    {
+        boxes2[j] = (struct Hittable){.which = (enum Which_Hittable)Sphere,
+                                      .object.sphere =
+                                          {.center =
+                                               (struct Ray){.direction = {0, 0, 0}},
+                                           .radius = 10.0,
+                                           .mat_cfg = &white_mat}};
+        vec_rand_in_range(boxes2[j].object.sphere.center.origin, 0, 165);
+        sphere_static_bound(&boxes2[j].object.sphere);
+    }
+
+    struct Hittable composite_box = {.which = Composite_Hittable,
+                                     .object.comp =
+                                         {.root = BVH_construct_tree(boxes2, ns)}};
+
+    struct Hittable rot = {.which = Rotate_y, .object.rotate_y.rotate_object = &composite_box};
+    rotate_init(&rot.object.rotate_y, 15);
+
+    world[actual_world_len] =
+        (struct Hittable){.which = (enum Which_Hittable)Translate,
+                          .object.translate = {.tran_object = &rot, .offset = {-100, 270, 395}}};
+    tran_init(&world[actual_world_len].object.translate);
+    actual_world_len++;
+
+    // We rely on the OS to cleanup the malloced memory
+    // as we need it for the rest of the program's duration anyhow.
+    struct BVH_Node *world_tree = BVH_construct_tree(world, actual_world_len);
+
+    struct Camera_Config cam =
+        {
+            .aspect_ratio = 1.0,
+            .image_width = image_width,
+            .samples_per_pixel = samples_per_pixel,
+            .max_depth = max_depth,
+            .background = {0, 0, 0},
+
+            .vfov = 40,
+            .lookfrom = {478, 278, -600},
+            .lookat = {278, 278, 0},
+            .vup = {0, 1, 0},
+
+            .defocus_angle = 0,
+            .focus_dist = 10.0, // This is the default value.
+        };
+
+    camera_render(world_tree, &cam);
+}
+
 int main()
 {
 
@@ -826,6 +1040,12 @@ int main()
         break;
     case (enum Scene)CORNELL_SMOKE:
         cornell_smoke();
+        break;
+    case (enum Scene)BOOK2_FINAL_LQ:
+        book2_final_scene(400, 250, 4);
+        break;
+    case (enum Scene)BOOK2_FINAL_HQ:
+        book2_final_scene(800, 10000, 40);
         break;
     default:
         fprintf(stderr, "Invalid scene selection!\n");

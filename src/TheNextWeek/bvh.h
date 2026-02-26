@@ -237,6 +237,14 @@ struct BVH_Node *BVH_construct_tree(const struct Hittable *world, int world_leng
                                                  .hittable_object = &world[world_index]};
             break;
 
+        case (enum Which_Hittable)Composite_Hittable:
+            // Ideally we don't get this type of Hittable because the whole point of Composite_Hittable
+            // is to apply later transfromations to it like rotating it or translating it.
+            arr[world_index] = (struct BVH_Node){.bbox = world[world_index].object.comp.root->bbox,
+                                                 .node_type = (enum Node_Type)PRIME,
+                                                 .hittable_object = &world[world_index]};
+            break;
+
         default:
             fprintf(stderr, "Could not identify Hittable in BVH_construct_tree function!\n");
             fflush(stderr);
@@ -251,6 +259,46 @@ struct BVH_Node *BVH_construct_tree(const struct Hittable *world, int world_leng
 static inline void helper_init_cm_bbox(struct Constant_Medium *cm)
 {
     cm->bbox = cm->boundary->bbox;
+}
+
+const struct AABB *get_bbox(const struct Hittable *h_object)
+{
+    switch (h_object->which)
+    {
+    case (enum Which_Hittable)Sphere:
+
+        return &h_object->object.sphere.bbox;
+        break;
+
+    case (enum Which_Hittable)Quad:
+
+        return &h_object->object.quad.bbox;
+        break;
+
+    case (enum Which_Hittable)Translate:
+
+        return &h_object->object.translate.bbox;
+        break;
+
+    case (enum Which_Hittable)Rotate_y:
+
+        return &h_object->object.rotate_y.bbox;
+        break;
+
+    case (enum Which_Hittable)Constant_Medium:
+        return &h_object->object.cm.bbox;
+        break;
+
+    case (enum Which_Hittable)Composite_Hittable:
+        return &h_object->object.comp.root->bbox;
+        break;
+
+    default:
+        fprintf(stderr, "Could not identify h_object in get_bbox()!\n");
+        fflush(stderr);
+        exit(EXIT_FAILURE);
+        break;
+    }
 }
 
 /* OLD-- my approach-- does not play very nice with optimizations

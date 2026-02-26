@@ -72,6 +72,17 @@ struct Rotate_y
     struct AABB bbox; //< The bbox of *this* Rotation object (!= the underlying object's bbox).
 };
 
+/// @brief A hittable made up of other hittables. **Note this is a transparent container**
+/// it is *not* its own object that exists in the scene. This enables certain efficiencies (like instead of rotating
+/// many different objects, making a composite hittable from them and then simply rotating
+/// that 1 composite hittable's bbox).
+/// Note the bbox of this object is root->bbox.
+/// Must init the root by calling BVH_construct_tree().
+struct Composite_Hittable
+{
+    struct BVH_Node *root;
+};
+
 /// @brief An enum of all possible hittable objects (we can then have an array of the type [Hittable]
 /// for a list of hittalbe objects).
 ///
@@ -83,6 +94,7 @@ enum Which_Hittable
     Translate,
     Rotate_y,
     Constant_Medium,
+    Composite_Hittable
 };
 
 union Hittable_Object
@@ -92,6 +104,7 @@ union Hittable_Object
     struct Translate translate;
     struct Rotate_y rotate_y;
     struct Constant_Medium cm;
+    struct Composite_Hittable comp;
 };
 
 struct Hittable
@@ -110,48 +123,21 @@ struct Hittable
 /// @return bool if the Hittable object was hit by the given ray
 bool object_hit(const struct Hittable *h_object, const struct Ray *r, struct Interval ray_t, struct Hit_Record *rec);
 
+// Forward declare get_bbox
+
+/// @brief Find out the bbox of a Hittable object. Returns a non-null pointer to it.
+/// If this function fails, the program exits.
+const struct AABB *get_bbox(const struct Hittable *h_object);
+
 /// @brief Init the bbox of this Translate struct.
 /// @remark Must have struct Hittable *tran_object (including the underlying object's bbox!)
 /// and vec3 offset initialized before this call!
 void tran_init(struct Translate *tran)
 {
-    struct AABB *underlying_bbox = nullptr;
-
     // Find out the underlying object bbox
-    switch (tran->tran_object->which)
-    {
-    case (enum Which_Hittable)Sphere:
+    const struct AABB *underlying_bbox = get_bbox(tran->tran_object);
 
-        underlying_bbox = &tran->tran_object->object.sphere.bbox;
-        break;
-
-    case (enum Which_Hittable)Quad:
-
-        underlying_bbox = &tran->tran_object->object.quad.bbox;
-        break;
-
-    case (enum Which_Hittable)Translate:
-
-        underlying_bbox = &tran->tran_object->object.translate.bbox;
-        break;
-
-    case (enum Which_Hittable)Rotate_y:
-
-        underlying_bbox = &tran->tran_object->object.rotate_y.bbox;
-        break;
-
-    case (enum Which_Hittable)Constant_Medium:
-        underlying_bbox = &tran->tran_object->object.cm.bbox;
-        break;
-
-    default:
-        fprintf(stderr, "Could not identify underlying object in tran_init!\n");
-        fflush(stderr);
-        exit(EXIT_FAILURE);
-        break;
-    }
-
-    // We now know underlying_bbox != nullptr
+    // We know underlying_bbox != nullptr
     bbox_offset(&tran->bbox, underlying_bbox, tran->offset);
 }
 
@@ -190,43 +176,9 @@ void rotate_init(struct Rotate_y *rot, double angle)
     rot->sin_theta = sin(radians);
     rot->cos_theta = cos(radians);
 
-    struct AABB *underlying_bbox = nullptr;
+    const struct AABB *underlying_bbox = get_bbox(rot->rotate_object);
 
-    // Find out the underlying object bbox
-    switch (rot->rotate_object->which)
-    {
-    case (enum Which_Hittable)Sphere:
-
-        underlying_bbox = &rot->rotate_object->object.sphere.bbox;
-        break;
-
-    case (enum Which_Hittable)Quad:
-
-        underlying_bbox = &rot->rotate_object->object.quad.bbox;
-        break;
-
-    case (enum Which_Hittable)Translate:
-
-        underlying_bbox = &rot->rotate_object->object.translate.bbox;
-        break;
-
-    case (enum Which_Hittable)Rotate_y:
-
-        underlying_bbox = &rot->rotate_object->object.rotate_y.bbox;
-        break;
-
-    case (enum Which_Hittable)Constant_Medium:
-        underlying_bbox = &rot->rotate_object->object.cm.bbox;
-        break;
-
-    default:
-        fprintf(stderr, "Could not identify underlying object in rotate_init!\n");
-        fflush(stderr);
-        exit(EXIT_FAILURE);
-        break;
-    }
-
-    // We now know underlying_bbox != nullptr
+    // We know underlying_bbox != nullptr
 
     point3 min = {infinity, infinity, infinity};
     point3 max = {-infinity, -infinity, -infinity};
@@ -334,6 +286,11 @@ bool object_hit(const struct Hittable *h_object, const struct Ray *r, struct Int
     case (enum Which_Hittable)Constant_Medium:
 
         return cm_hit(&h_object->object.cm, r, ray_t, rec);
+        break;
+
+    case (enum Which_Hittable)Composite_Hittable:
+
+        return BVH_node_hit(h_object->object.comp.root, r, ray_t, rec);
         break;
 
     default:
