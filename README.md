@@ -38,3 +38,10 @@ I converted some images from ppm to png, so they can be displayed here:
 <p align="center">
   Book 2: Quadrilaterals
 </p>
+
+<p align="center">
+  <img src="images\40_book_two_final_render_high_quality.png" alt="Book 2 Final Render"/>
+</p>
+<p align="center">
+  Book 2 Final Render
+</p>

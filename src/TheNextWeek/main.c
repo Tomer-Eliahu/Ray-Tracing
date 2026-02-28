@@ -29,7 +29,7 @@ enum Scene
 };
 
 /// Which scene to render
-#define SCENE_SELECT BOOK2_FINAL_LQ
+#define SCENE_SELECT BOOK2_FINAL_HQ
 
 #ifndef SCENE_SELECT
 #error "SCENE_SELECT must be defined!"
