@@ -103,6 +103,11 @@ bool cm_hit(const struct Constant_Medium *cm, const struct Ray *r, struct Interv
 
     double ray_speed = len(r->direction); // Also the distance the ray travels in 1 unit of time.
     double distance_inside_boundary = (rec2.t - rec1.t) * ray_speed;
+    // Source of where we get this hit_distance from:
+    // https://psgraphics.blogspot.com/2013/11/scattering-in-constant-medium.html.
+    // Note that what the blog calls t is really meant to be the distance d.
+    // The blog assumes (but the book does not) that the direction vector of the ray is a unit vector,
+    // so in that case distance inside the boundary would just be time inside the boundary.
     double hit_distance = cm->neg_inv_density * log(random_zero_to_one());
 
     // Ray went fully through the boundary without scattering (did not hit the fog inside)
