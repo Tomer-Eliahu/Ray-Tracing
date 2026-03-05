@@ -52,6 +52,28 @@ set ( SOURCE_NEXT_WEEK
   # src/TheNextWeek/vec3.h
 )
 
+set ( SOURCE_REST_OF_YOUR_LIFE
+  src/TheRestOfYourLife/main.c
+  # src/TheRestOfYourLife/aabb.h
+  # src/TheRestOfYourLife/camera.h
+  # src/TheRestOfYourLife/color.h
+  # src/TheRestOfYourLife/constant_medium.h
+  # src/TheRestOfYourLife/hittable.h
+  # src/TheRestOfYourLife/hittable_list.h
+  # src/TheRestOfYourLife/interval.h
+  # src/TheRestOfYourLife/material.h
+  # src/TheRestOfYourLife/onb.h
+  # src/TheRestOfYourLife/pdf.h
+  # src/TheRestOfYourLife/perlin.h
+  # src/TheRestOfYourLife/quad.h
+  # src/TheRestOfYourLife/ray.h
+  # src/TheRestOfYourLife/rtw_stb_image.h
+  # src/TheRestOfYourLife/rtweekend.h
+  # src/TheRestOfYourLife/sphere.h
+  # src/TheRestOfYourLife/texture.h
+  # src/TheRestOfYourLife/vec3.h
+)
+
 include_directories(src)
 
 
@@ -59,3 +81,11 @@ include_directories(src)
 
 add_executable(inOneWeekend      ${SOURCE_ONE_WEEKEND})
 add_executable(theNextWeek       ${EXTERNAL} ${SOURCE_NEXT_WEEK})
+add_executable(theRestOfYourLife ${EXTERNAL} ${SOURCE_REST_OF_YOUR_LIFE})
+# add_executable(cos_cubed         src/TheRestOfYourLife/cos_cubed.cc         )
+# add_executable(cos_density       src/TheRestOfYourLife/cos_density.cc       )
+# add_executable(integrate_x_sq    src/TheRestOfYourLife/integrate_x_sq.cc    )
+# add_executable(pi                src/TheRestOfYourLife/pi.cc                )
+# add_executable(estimate_halfway  src/TheRestOfYourLife/estimate_halfway.cc  )
+# add_executable(sphere_importance src/TheRestOfYourLife/sphere_importance.cc )
+# add_executable(sphere_plot       src/TheRestOfYourLife/sphere_plot.cc       )
