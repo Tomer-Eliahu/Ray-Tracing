@@ -3,7 +3,7 @@
 This repo follows the [ray tracing books](https://raytracing.github.io/) as I code my own ray tracer from *scratch*.
 While the source code for the final ray tracer is available, I did not look at it.
 
-I chose using C instead of C++ (what the books suggest using) or Rust as I wanted to do a more substantial C project.
+I chose to use C instead of C++ (what the books suggest using) or Rust as I wanted to do a more substantial C project.
 
 
 ## How to view the rendered images
@@ -45,3 +45,11 @@ I converted some images from ppm to png, so they can be displayed here:
 <p align="center">
   Book 2 Final Render
 </p>
+
+### Note
+Book three (Ray Tracing: The Rest of Your Life) is mainly about making sure you have the mathematical basis
+to be involved in this field professionally: 
+> In this volume, I assume that you are either a highly interested student, or are someone who is pursuing a career 
+> related to ray tracing. We will be diving into the math of creating a very serious ray tracer. When you are done, you
+> should be well equipped to use and modify the various commercial ray tracers found in many popular domains, such as
+> the movie, television, product design, and architecture industries.

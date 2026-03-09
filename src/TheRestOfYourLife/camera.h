@@ -230,6 +230,16 @@ void ray_color(color3 color, const struct Ray *ray, int depth,
         color[1] = (1.0 - a) * 1 + a * 0.7;
         color[2] = (1.0 - a) * 1 + a * 1;
     */
+
+    /* The blue to white gradient approach is an example of environment mapping
+    (having a background environment to our rendered scene that affects the lighting/colors of objects in the scene).
+
+    Another approach suggested by the book (in a further reading):
+    The easiest environment mapping is to use a single image for the entire sphere of directions.
+    If a ray does not hit anything, we pretend it hit the sphere (which does *not* actually exist in the scene space)
+    (where it hit the sphere is determined by the normalized ray direction).
+
+    */
 }
 
 /// @brief Derive Camera_Info from the camera config.
