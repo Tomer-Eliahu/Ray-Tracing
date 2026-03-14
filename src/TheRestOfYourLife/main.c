@@ -29,7 +29,7 @@ enum Scene
 };
 
 /// Which scene to render
-#define SCENE_SELECT BOOK2_FINAL_HQ
+#define SCENE_SELECT CORNELL_BOX
 
 #ifndef SCENE_SELECT
 #error "SCENE_SELECT must be defined!"

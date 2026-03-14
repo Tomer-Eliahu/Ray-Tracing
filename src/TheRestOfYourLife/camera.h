@@ -41,6 +41,8 @@ struct Camera_Info
 {
     int image_height;           //< Rendered image height
     double pixel_samples_scale; // Color scale factor for a sum of pixel samples
+    int sqrt_spp;               // Square root of number of samples per pixel
+    double recip_sqrt_spp;      // 1 / sqrt_spp
     point3 center;              //< Camera center
     point3 pixel00_loc;         //< Location of pixel 0, 0
     vec3 pixel_delta_u;         //< Offset to pixel to the right
@@ -253,7 +255,9 @@ void camera_initialize(const struct Camera_Config *cfg, struct Camera_Info *cam_
     cam_info->image_height = (int)cfg->image_width / cfg->aspect_ratio;
     cam_info->image_height = (cam_info->image_height < 1) ? 1 : cam_info->image_height;
 
-    cam_info->pixel_samples_scale = 1.0 / cfg->samples_per_pixel;
+    cam_info->sqrt_spp = (int)sqrt(cfg->samples_per_pixel);
+    cam_info->pixel_samples_scale = 1.0 / (cam_info->sqrt_spp * cam_info->sqrt_spp);
+    cam_info->recip_sqrt_spp = 1.0 / cam_info->sqrt_spp;
 
     // Set the camera center;
     memcpy(cam_info->center, cfg->lookfrom, 3 * sizeof(double));
@@ -312,6 +316,17 @@ void sample_square(vec3 vec)
     vec[2] = 0;
 }
 
+/// @brief Sets the vector to a random point in the square sub-pixel specified by grid
+/// indices s_i and s_j, for an idealized unit square pixel [-.5,-.5] to [+.5,+.5].
+/// @remark Doing stratified sampling is more accurate (higher precision) than non-stratified.
+/// See Book 3 Section 2 for more details.
+void sample_square_stratified(vec3 vec, const struct Camera_Info *cam_info, int s_i, int s_j)
+{
+    vec[0] = ((s_i + random_zero_to_one()) * cam_info->recip_sqrt_spp) - 0.5;
+    vec[1] = ((s_j + random_zero_to_one()) * cam_info->recip_sqrt_spp) - 0.5;
+    vec[2] = 0;
+}
+
 /// @brief Sets point to a random point in the camera defocus disk.
 void defocus_disk_sample(point3 point, const struct Camera_Info *cam_info)
 {
@@ -326,13 +341,15 @@ void defocus_disk_sample(point3 point, const struct Camera_Info *cam_info)
 }
 
 /// @brief Construct a camera ray originating from the defocus disk and directed at a randomly
-/// sampled point around the pixel location i, j.
-void get_ray(struct Ray *ray, const struct Camera_Info *cam_info, int i, int j, double defocus_angle)
+/// sampled point around the pixel location i, j for stratified sample square s_i, s_j.
+/// @remark For details on what is a stratified sample see Book 3 Section 2.
+void get_ray(struct Ray *ray, const struct Camera_Info *cam_info,
+             int i, int j, int s_i, int s_j, double defocus_angle)
 {
 
     // calculate the pixel sample location
     point3 offset;
-    sample_square(offset);
+    sample_square_stratified(offset, cam_info, s_i, s_j);
 
     point3 temp1, temp2;
     point3 pixel_sample;
@@ -379,20 +396,22 @@ void camera_render(const struct BVH_Node *world, const struct Camera_Config *cfg
         {
             color3 pixel_color = {0};
             struct Ray r;
+            color3 temp;
 
             /*
                 For a single pixel composed of multiple samples,
-                we'll select samples from the area surrounding the pixel
+                we'll select *stratified* samples from the area surrounding the pixel
                 and average the resulting light (color) values together. We do this to accomplish antialiasing
                 (smoothing out edges). **Remember a pixel is really a point sample**.
             */
-            for (int sample = 0; sample < cfg->samples_per_pixel; sample++)
+            for (int s_j = 0; s_j < cam_info.sqrt_spp; s_j++)
             {
-                get_ray(&r, &cam_info, i, j, cfg->defocus_angle);
-
-                color3 temp;
-                ray_color(temp, &r, cfg->max_depth, world, cfg);
-                add(pixel_color, pixel_color, temp);
+                for (int s_i = 0; s_i < cam_info.sqrt_spp; s_i++)
+                {
+                    get_ray(&r, &cam_info, i, j, s_i, s_j, cfg->defocus_angle);
+                    ray_color(temp, &r, cfg->max_depth, world, cfg);
+                    add(pixel_color, pixel_color, temp);
+                }
             }
 
             /*
