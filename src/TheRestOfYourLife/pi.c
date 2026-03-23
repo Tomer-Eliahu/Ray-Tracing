@@ -65,6 +65,7 @@ int main()
         }
     }
 
+    // Note that the area of the unit circle is Pi as well so this is also an estimate of that area.
     printf("Regular Estimate of Pi = %.12f \n", (4.0 * inside_circle) / (sqrt_N * sqrt_N));
     printf("Stratified Estimate of Pi = %.12f \n", (4.0 * inside_circle_stratified) / (sqrt_N * sqrt_N));
 }
