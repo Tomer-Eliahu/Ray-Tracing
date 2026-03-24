@@ -121,6 +121,7 @@ But this will produce decent nonuniform distributions.
 This divide and conquer method of producing nonuniform distributions is used somewhat commonly in practice,
 although there are much more efficient means of doing so than a simple binary partition.
 If you have an arbitrary function that you wish to use as the PDF for a distribution,
-you'll want to research the Metropolis-Hastings Algorithm.
+you might want to research the Metropolis-Hastings Algorithm
+as an efficient alternative to the simple binary partition approach presented here.
 
 */

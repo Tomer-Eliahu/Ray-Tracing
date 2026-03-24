@@ -134,4 +134,21 @@ this will be explained a little bit later, but for now we'll focus on generating
 How do we generate a random number with a PDF?
 For that we will need some more machinery. Don’t worry — this doesn’t go on forever!
 
+
+My note regarding section 3.6: this is the key idea
+
+The idea is that if we can find f(d) for all values then we have
+our random number generator with density p(r)!
+This is because we can say for infinitesimally small delta
+that the values between f(x + delta) and f(x) are close to uniformally distributed and since the interval
+is so small picking f(x) is fine (a good enough approximation).
+
+If we cannot find f(d) for all values by pure math, we can do the binary partition approach in estimate_halfway.c
+that approximates f(d) to some level we desire. The idea of using f(d) directly if we can find f(d) for all values
+is basically taking the limit of this binary partition approach.
+
+Finding f(d) by pure math means solving for the CDF (by integrating the PDF or approximating it by other means)
+and then finding the inverse of the CDF on the relevant interval (f(d) is that inverse of the CDF).
+The book will sometimes call the inverse of the CDF by ICD.
+
 */
