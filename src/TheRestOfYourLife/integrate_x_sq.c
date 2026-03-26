@@ -43,30 +43,120 @@ Where we use the Monte Carlo method to approximate average(x^2,0,2).
 In the general case (but still assuming X is a uniform random variable over the interval)
 it would be:
 E[f(x)|a≤x≤b]=(1/(b−a))*area(f(x),a,b)
-area(f(x),a,b)=(b-a)*average(f(x),a,b)
+area(f(x),a,b)=(b-a)*average(f(x),a,b) // Note that by pushing (b-a) into the average we can think of this
+// as averaging areas.
+// That is area(f(x),a,b) = some average of proposed areas by sampling f(x) * something
+
+( Later we see this something = (1/PDF used for sampling).
+The (b-a) comes from the specific case of using a unifrom PDF).
 
 */
 
 #include "rtweekend.h"
 
+/*The code in its section 3.7 last before final version:
+We can try to solve for the integral using the *linear* PDF, p(r)=r/2,
+for which we were able to solve for the CDF and its inverse, ICD.
+To do that, all we need to do is replace the functions ICD(d)=sqrt(4d) and p(x)=x/2.
+
+So now we can handel non-uniform PDFs.
+We are still calculating the area(f(x),a,b) (i.e. the integral) but are now using a weighted average approach
+(to calculate the *area* directly by averaging proposed areas) by
+sampling some regions of f(x) over [a,b] more frequently but adjusting the weights accordingly.
+
+CRITICAL: The Key Idea:
+    Intuitively, we are taking smallers silvers of the area "under" f(x) in some areas
+    (where our PDF tells us to sample more, i.e. where our PDF is high)
+    and bigger silvers of the area "under" f(x) in other areas.
+    By averaging all these silvers, we get the actual area under f(x) (this is an approximation: the more we sample
+    this way, the closer we get to the actual exact result).
+    I wrote "under" because those silvers are not really under f(x) but rather proposed areas
+    (since we average them by dividing by N these silvers must sum to more than the area under f(x)).
+
+    I think these proposed areas are proportional to the actual real silvers (not sure though).
+
+
+double icd(double d)
+{
+    return sqrt(4.0 * d);
+}
+
+double pdf(double x)
+{
+    return x / 2.0;
+}
+
 int main()
 {
-    int a = 0;
-    int b = 2;
     int N = 1000000;
     double sum = 0.0;
 
     for (int i = 0; i < N; i++)
     {
-        double x = random_in_range(a, b);
-        sum += x * x;
+        double z = random_zero_to_one();
+        if (z == 0.0) // Ignore zero to avoid NaNs
+            continue;
+
+        double x = icd(z);
+        sum += x * x / pdf(x); // See note from section 3.7 below on why we do this
     }
 
-    printf("I = %.12f \n", (b - a) * (sum / N));
+    printf("I = %.12f \n", (sum / N));
+}
+
+*/
+
+/*Final version:
+If you compared the runs from the uniform PDF and the linear PDF,
+you would have probably found that the linear PDF converged faster.
+If you think about it, a linear PDF is probably a better approximation
+for a quadratic function than a uniform PDF, so you would expect it to converge faster.
+My note: this makes sense as the linear PDF samples the areas the function area changes most
+(highest variance regions), more often.
+
+If that's the case, then we should just try to make the PDF match the integrand
+by turning the PDF into a quadratic function p(r) = C*(r^2) for r in [0,2] and 0 elsewhere.
+We can solve for C by knowing the integral of p(r) on the real line must be = 1.
+
+Now for JUST ONE SAMPLE we always get the exact right answer (because z gets canceled out).
+Why? because if the PDF is just the function * some constant C, and since our goal is to integrate the function,
+when we successfully integrated the PDF, we acheived our goal. That is we found the relevant
+area under the curve and made C = 1/area.
+Then the sum is the function/pdf = function/ (C*function) = 1/C = area.
+
+*/
+
+double icd(double d)
+{
+    return 8.0 * pow(d, 1.0 / 3.0);
+}
+
+double pdf(double x)
+{
+    return (3.0 / 8.0) * x * x;
+}
+
+int main()
+{
+    int N = 1;
+    double sum = 0.0;
+
+    for (int i = 0; i < N; i++)
+    {
+        double z = random_zero_to_one();
+        if (z == 0.0) // Ignore zero to avoid NaNs
+            continue;
+
+        double x = icd(z);
+        sum += x * x / pdf(x); // See note from section 3.7 below on why we do this
+    }
+
+    printf("I = %.12f \n", (sum / N));
 }
 
 /*
-You could rightly point to this example and say that the integration is actually a lot less work than the Monte Carlo.
+You could rightly point to this example (talking about an older version of the code)
+and say that the integration is actually a lot less work than the Monte Carlo.
 That might be true in the case where the function is f(x)=x^2,
 but there exist many functions where it might be simpler to solve for the Monte Carlo than for the integration,
 like f(x)= (sin(x))^5.
@@ -150,5 +240,58 @@ is basically taking the limit of this binary partition approach.
 Finding f(d) by pure math means solving for the CDF (by integrating the PDF or approximating it by other means)
 and then finding the inverse of the CDF on the relevant interval (f(d) is that inverse of the CDF).
 The book will sometimes call the inverse of the CDF by ICD.
+
+
+From Section 3.7: Importance Sampling
+
+We need to account for the nonuniformity of the PDF of x.
+Failing to account for this nonuniformity will introduce bias in our scene.
+Indeed, this bias is the source of our inaccurately bright image.
+Accounting for the nonuniformity will yield accurate results.
+The PDF will “steer” samples toward specific parts of the distribution,
+which will cause us to converge *faster*, but at the cost of introducing bias.
+To remove this bias, we need to down-weight where we sample more frequently,
+and to up-weight where we sample less frequently. For our new nonuniform random number generator,
+the PDF defines how much or how little we sample a specific portion.
+So the weighting function should be proportional to 1/pdf.
+In fact it is *exactly* 1/pdf (we can deduce this from the specific case of the uniform distribution).
+This is why we divide x*x by pdf(x).
+
+*/
+
+/* Chapter 3 final notes
+
+CRITICAL: Key Insight:
+    area(f(x),a,b) = some average of proposed areas by sampling f(x) * (1/PDF used for sampling).
+    (we saw that this is true for a few situations and appears to be true in general,
+    but we did not see a proof for why it is true in general beyond some intuition we developed).
+
+A nonuniform PDF “steers” more samples to where the PDF is big,
+and fewer samples to where the PDF is small.
+By this sampling, we would expect less noise in the places where the PDF is big and more noise where the PDF is small.
+If we choose a PDF that is higher in the parts of the scene that have higher noise,
+and is smaller in the parts of the scene that have lower noise,
+we'll be able to reduce the total noise of the scene with *fewer* samples.
+This means that we will be able to converge to the correct scene **faster** than with a uniform PDF.
+In effect, we are steering our samples toward the parts of the distribution that are more *important*.
+This is why using a carefully chosen nonuniform PDF is usually called *importance sampling*.
+
+Note that for *any* PDF you choose to use (even a uniform one), you will eventually converage to the right answer.
+But the closer the PDF is to the actual function, the *faster* the converagence will be.
+This should make sense, as that means choosing to sample the important parts of the distribution more often.
+
+The perfect importance sampling (PDF = target function) is only possible when we already know the answer
+(we got the PDF by integrating the target function analytically),
+but it’s a good exercise to make sure our code works.
+
+Let's review the main concepts that underlie Monte Carlo ray tracers:
+
+    1.  You have an integral of f(x) over some domain [a,b] you want to know.
+    2.  You pick a PDF p that is non-zero and non-negative over [a,b]. The non-zero requirement comes from 3.
+    3.  You average a whole ton of f(r)/p(r) where r is a random number with PDF p.
+        This gives you the answer (approx.).
+
+    *Any* choice of PDF p will result in *always* converging to the right answer,
+    but the closer that p approximates f, the faster it will converge.
 
 */
