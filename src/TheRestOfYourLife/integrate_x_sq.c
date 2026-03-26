@@ -265,6 +265,10 @@ CRITICAL: Key Insight:
     area(f(x),a,b) = some average of proposed areas by sampling f(x) * (1/PDF used for sampling).
     (we saw that this is true for a few situations and appears to be true in general,
     but we did not see a proof for why it is true in general beyond some intuition we developed).
+    Later I googled it, and the proof of why it works and why when p(x) is close to f(x) we get
+    faster convergence are really easy actually. To see it, just google "The Monte Carlo estimator".
+    The faster convergence (here really means getting close enough to the actual value in less samples)
+    comes from the lower standard error (due to lower variance) of The Monte Carlo estimator when we pick good p(x).
 
 A nonuniform PDF “steers” more samples to where the PDF is big,
 and fewer samples to where the PDF is small.
