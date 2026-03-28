@@ -297,5 +297,9 @@ Let's review the main concepts that underlie Monte Carlo ray tracers:
 
     *Any* choice of PDF p will result in *always* converging to the right answer,
     but the closer that p approximates f, the faster it will converge.
+    Note that this holds even if p and f are functions over multiple variables
+    (in that case p is the joint PDF).
+    You can see a proof of why this holds by googling: 
+    proof the monte carlo estimator with non-uniform distribution is unbiased.
 
 */
