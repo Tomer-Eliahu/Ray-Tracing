@@ -288,7 +288,8 @@ The perfect importance sampling (PDF = target function) is only possible when we
 (we got the PDF by integrating the target function analytically),
 but it’s a good exercise to make sure our code works.
 
-Let's review the main concepts that underlie Monte Carlo ray tracers:
+CRITICAL:
+    Let's review the main concepts that underlie Monte Carlo ray tracers:
 
     1.  You have an integral of f(x) over some domain [a,b] you want to know.
     2.  You pick a PDF p that is non-zero and non-negative over [a,b]. The non-zero requirement comes from 3.
@@ -300,6 +301,8 @@ Let's review the main concepts that underlie Monte Carlo ray tracers:
     Note that this holds even if p and f are functions over multiple variables
     (in that case p is the joint PDF).
     You can see a proof of why this holds by googling: 
-    proof the monte carlo estimator with non-uniform distribution is unbiased.
+        The Importance Sampling Monte Carlo estimator proof it converges to the integral value.
+        This stems from the strong law of large numbers.
+        The fact this estimator is unbiased (i.e. its own expected value is also the integral value) is *different*.
 
 */
