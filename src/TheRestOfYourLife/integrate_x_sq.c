@@ -306,3 +306,28 @@ CRITICAL:
         The fact this estimator is unbiased (i.e. its own expected value is also the integral value) is *different*.
 
 */
+
+/* Section 5: Light Scattering notes
+
+From section 5.2:
+The color of a surface is found by integrating these terms over the unit hemisphere by the incident direction:
+
+Color_o(x,ωo,λ)= ∫ωi of A(x,ωi,ωo,λ)⋅pScatter(x,ωi,ωo,λ)⋅Color_i(x,ωi,λ)
+
+My note: 
+    This is true for opaque surfaces. 
+    For glass you will integrate over the unit *sphere* by the incident direction 
+    (and some additional changes may be needed).
+    This is the Rendering Equation for opaque, non-emissive surfaces (I think).
+
+We've added a Color_i term. 
+The scattering PDF pScatter(..) (over outgoing direction as a **solid angle**) 
+and the albedo at the surface of an object are acting as filters 
+to the light that is shining on that point. 
+So we need to solve for the light that is shining on that point. 
+This is a **recursive** algorithm, and is the reason our ray_color function 
+returns the color of the current object multiplied by the color of the next ray.
+Note that the incoming direction for one object can be the outgoing direction for another
+(it is the exact same solid angle).
+
+*/
