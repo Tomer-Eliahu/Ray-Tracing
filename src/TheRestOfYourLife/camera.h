@@ -129,8 +129,16 @@ void ray_color(color3 color, const struct Ray *ray, int depth,
 
             if (lambertian_scatter(ray, &rec, attenuation, &scattered))
             {
+                // Recall Color_o(x,ωo,λ)= ∫ωi of A(x,ωi,ωo,λ)⋅pScatter(x,ωi,ωo,λ)⋅Color_i(x,ωi,λ)
+                // So we weight our scattering samples by pScatter which is scattering_pdf.
+                // Recall that the PDF we *choose* is p(..) which is the sampling PDF which is different
+                // than pScatter(..).
+                double scattering_pdf = lambertian_scattering_pdf(ray, &rec, &scattered);
+                double pdf_value = scattering_pdf;
+
                 ray_color(color, &scattered, depth - 1, world, cfg);
                 multiply(color, attenuation, color);
+                scale(color, color, (scattering_pdf / pdf_value));
 
                 // Note the book returns return color_from_emission + color_from_scatter;
                 // But for all materials other than light color_from_emission is 0,0,0.

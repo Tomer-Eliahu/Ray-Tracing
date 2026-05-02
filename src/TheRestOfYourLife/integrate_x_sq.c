@@ -293,14 +293,14 @@ CRITICAL:
 
     1.  You have an integral of f(x) over some domain [a,b] you want to know.
     2.  You pick a PDF p that is non-zero and non-negative over [a,b]. The non-zero requirement comes from 3.
-    3.  You average a whole ton of f(r)/p(r) where r is a random number with PDF p.
+    3.  You *average* a whole ton of f(r)/p(r) where r is a random number with PDF p.
         This gives you the answer (approx.).
 
     *Any* choice of PDF p will result in *always* converging to the right answer,
     but the closer that p approximates f, the faster it will converge.
     Note that this holds even if p and f are functions over multiple variables
     (in that case p is the joint PDF).
-    You can see a proof of why this holds by googling: 
+    You can see a proof of why this holds by googling:
         The Importance Sampling Monte Carlo estimator proof it converges to the integral value.
         This stems from the strong law of large numbers.
         The fact this estimator is unbiased (i.e. its own expected value is also the integral value) is *different*.
@@ -314,20 +314,65 @@ The color of a surface is found by integrating these terms over the unit hemisph
 
 Color_o(x,ωo,λ)= ∫ωi of A(x,ωi,ωo,λ)⋅pScatter(x,ωi,ωo,λ)⋅Color_i(x,ωi,λ)
 
-My note: 
-    This is true for opaque surfaces. 
-    For glass you will integrate over the unit *sphere* by the incident direction 
+My note:
+    This is true for opaque surfaces.
+    For glass you will integrate over the unit *sphere* by the incident direction
     (and some additional changes may be needed).
     This is the Rendering Equation for opaque, non-emissive surfaces (I think).
 
-We've added a Color_i term. 
-The scattering PDF pScatter(..) (over outgoing direction as a **solid angle**) 
-and the albedo at the surface of an object are acting as filters 
-to the light that is shining on that point. 
-So we need to solve for the light that is shining on that point. 
-This is a **recursive** algorithm, and is the reason our ray_color function 
+We've added a Color_i term.
+The scattering PDF pScatter(..) (over outgoing direction as a **solid angle**)
+and the albedo at the surface of an object are acting as filters
+to the light that is shining on that point.
+So we need to solve for the light that is shining on that point.
+This is a **recursive** algorithm, and is the reason our ray_color function
 returns the color of the current object multiplied by the color of the next ray.
 Note that the incoming direction for one object can be the outgoing direction for another
 (it is the exact same solid angle).
+
+*/
+
+/* Section 6: Playing with Importance Sampling notes
+
+Recall that the problem we have is that small light sources or light sources that are far
+away generate too much noise for our scene because they do not get sampled enough.
+So we will see overly bright pixels (because a ray hitting the light is rare, so when we don't sample
+enough rays, the pixel is too bright) next to overly dark pixels (miss the light source too much).
+In reality (what we would like to have) is for these pixels to be somewhere in the between these extremes
+(where we would get if we sampled way more).
+The way we can fix this issue (without sending a lot more rays)
+is by steering rays towards the lights and using *importance sampling* allows
+us to do this without resulting in an overly bright picture overall.
+
+Recall the equation we wish to solve is
+Color_o(x,ωo,λ)= ∫ωi of A(x,ωi,ωo,λ)⋅pScatter(x,ωi,ωo,λ)⋅Color_i(x,ωi,λ)
+
+So we want to pick a sampling PDF p(ωo) to solve this integral using Monte-Carlo Integration.
+Remember Monte Carlo basics: ∫f(x)≈ average of a whole ton of f(r)/p(r).
+
+Our goal over the next several chapters is to instrument our program
+to send a bunch of extra rays toward light sources so that our picture is less noisy.
+
+Let’s assume we can send a bunch of rays toward the light source using a PDF pLight(ωo).
+Let’s also assume we have a PDF related to pScatter, and let’s call that pSurface(ωo).
+A great thing about PDFs is that you can just use linear mixtures of them to
+form mixture densities that are also PDFs!
+For example, the simplest would be:
+
+    p(ωo)= (1/2)⋅pSurface(ωo) + (1/2)⋅pLight(ωo)
+
+As long as the weights are positive and add up to one, any such mixture of PDFs is a PDF.
+Remember, we can use *any* PDF: all PDFs eventually converge to the correct answer.
+So, the game is to figure out how to make the PDF larger where the product
+
+    pScatter(x,ωi,ωo)⋅Color_i(x,ωi)
+
+is largest (I believe because for us in our scenes the albedo A is invariant over wi for our materials).
+For diffuse surfaces, this is mainly a matter of guessing where Color_i(x,ωi) is largest (it is the more
+dominant factor over pScatter). Which is equivalent to guessing where the most light is coming from.
+
+For a mirror, pScatter() is huge only near one direction, so pScatter() matters a lot more.
+In fact, most renderers just make mirrors a special case, and make the pScatter()/p()
+implicit — our code currently does that.
 
 */

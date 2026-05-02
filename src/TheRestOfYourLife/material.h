@@ -102,6 +102,26 @@ bool lambertian_scatter(const struct Ray *r_in, const struct Hit_Record *rec,
     return true;
 }
 
+/// @brief For the Lambertian material, this PDF is pScatter(..) = cos(θo)/π where θo
+/// is the angle between the surface normal and the scattering direction.
+/// @param r_in Incoming ray
+/// @param rec
+/// @param scattered The outbound ray from hitting this material.
+/// Must not be the zero vector (you can ensure this by calling lambertian_scatter first).
+/// @return
+/// @remark This is exactly how we *implictly* sampled the scattering direction in lambertian_scatter (I verified this).
+/// That means that we made p(ωo)=cos(θo)/π
+/// (our sampling PDF which is the only thing we can set to whatever PDF we want).
+/// As pScatter(..) = p(..), these terms canceled out and so we had Color_o(x,ωo,λ) ≈ average of ( A(…)⋅Color_i(…) )
+/// (or in code form ray_color = attenuation * next_ray_color(..) and we average that later).
+double lambertian_scattering_pdf([[maybe_unused]] const struct Ray *r_in,
+                                 const struct Hit_Record *rec, const struct Ray *scattered)
+{
+    vec3 temp;
+    double cos_theta = dot(rec->normal, unit(temp, (double *)scattered->direction));
+    return cos_theta < 0 ? 0 : cos_theta / pi;
+}
+
 /// @brief Metal material reflectance
 /// @param r_in Incoming ray
 /// @param attenuation The intensity of light lost
