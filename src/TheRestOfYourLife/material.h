@@ -81,13 +81,33 @@ struct Material_Cfg
 bool lambertian_scatter(const struct Ray *r_in, const struct Hit_Record *rec,
                         color3 attenuation, struct Ray *scattered)
 {
-
-    // Unused
-    (void)r_in;
-
     // Find scatter direction
     random_unit_vector(scattered->direction);
     add(scattered->direction, (double *)rec->normal, scattered->direction);
+
+    // Catch degenerate scatter direction (if the random vector is almost exactly the opposite of the normal)
+    if (near_zero(scattered->direction))
+    {
+        memcpy(scattered->direction, rec->normal, 3 * sizeof(double));
+    }
+
+    memcpy(scattered->origin, rec->p, 3 * sizeof(double));
+    scattered->tm = r_in->tm;
+
+    tex_value(attenuation, rec->mat_cfg->object.lambertian.tex, rec->u, rec->v, rec->p);
+    return true;
+}
+
+/// @brief Book 3 Section 6.3 has us do this.
+/// @remark The point of section 6.3 is that even though the pScatter and p will cancel out, because
+/// we now generate the scattering rays differently (use random_on_hemisphere in incorrect_lambertian_scatter)
+/// The image will be *materially* different.
+bool incorrect_lambertian_scatter(const struct Ray *r_in, const struct Hit_Record *rec,
+                                  color3 attenuation, struct Ray *scattered)
+{
+    // Section 6.3: incorrect for Lambertian.
+    // We replace Lambertian diffuse with uniform hemispherical diffuse material.
+    random_on_hemisphere(scattered->direction, rec->normal);
 
     // Catch degenerate scatter direction (if the random vector is almost exactly the opposite of the normal)
     if (near_zero(scattered->direction))
@@ -120,6 +140,18 @@ double lambertian_scattering_pdf([[maybe_unused]] const struct Ray *r_in,
     vec3 temp;
     double cos_theta = dot(rec->normal, unit(temp, (double *)scattered->direction));
     return cos_theta < 0 ? 0 : cos_theta / pi;
+}
+
+/// @brief Book 3 Section 6.3 has us do this.
+/// @remark The point of section 6.3 is that even though the pScatter and p will cancel out, because
+/// we now generate the scattering rays differently (use random_on_hemisphere in incorrect_lambertian_scatter)
+/// The image will be *materially* different.
+double incorrect_lambertian_scattering_pdf([[maybe_unused]] const struct Ray *r_in,
+                                           [[maybe_unused]] const struct Hit_Record *rec,
+                                           [[maybe_unused]] const struct Ray *scattered)
+{
+    // Uniform pdf on hemisphere surface.
+    return 1.0 / (2 * pi);
 }
 
 /// @brief Metal material reflectance
