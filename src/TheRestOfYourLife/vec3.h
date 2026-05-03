@@ -161,6 +161,28 @@ static inline void random_on_hemisphere(vec3 rand_vec, const vec3 normal)
     }
 }
 
+/// @brief Generate a random unit vector on the surface of the unit hemisphere
+/// according to the following PDF: p(ω)=f(θ)=cos(θ)/π (using the inversion method).
+/// θ is the angle between **the z-axis** and the resulting vector (ranges 0 to π/2).
+/// @remark See Book 3: Section 7.3: Cosine Sampling a Hemisphere for more details.
+/// @param rand_vec
+static inline void random_cosine_direction(vec3 rand_vec)
+{
+    double r1 = random_zero_to_one();
+    double r2 = random_zero_to_one();
+
+    double phi = 2 * pi * r1;
+    double x = cos(phi) * sqrt(r2);
+    double y = sin(phi) * sqrt(r2);
+    double z = sqrt(1 - r2);
+
+    rand_vec[0] = x;
+    rand_vec[1] = y;
+    rand_vec[2] = z;
+
+    return;
+}
+
 /// @brief Generate a random vector on the unit disk.
 /// @remark Rejecting a random vector outside the unit square (rejection sampling)
 /// ensures a uniform distribution of sample directions on the surface of the unit disk.
