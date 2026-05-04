@@ -3,6 +3,7 @@
 #include "vec3.h"
 #include "hittable.h"
 #include "texture.h"
+#include "onb.h"
 
 struct Lambertian
 {
@@ -79,8 +80,27 @@ struct Material_Cfg
 /// @param scattered The outbound ray from hitting this material
 /// @return
 bool lambertian_scatter(const struct Ray *r_in, const struct Hit_Record *rec,
-                        color3 attenuation, struct Ray *scattered)
+                        color3 attenuation, struct Ray *scattered, double *pdf)
 {
+    struct ONB uvw;
+    init_onb(&uvw, rec->normal);
+    vec3 rand_vec;
+
+    random_cosine_direction(rand_vec);
+    unit(scattered->direction,
+         onb_transform(scattered->direction, &uvw, rand_vec));
+    memcpy(scattered->origin, rec->p, 3 * sizeof(double));
+    scattered->tm = r_in->tm;
+
+    tex_value(attenuation, rec->mat_cfg->object.lambertian.tex, rec->u, rec->v, rec->p);
+    // The pdf value is cos(θ)/π where θ is the angle
+    // betwen the surface normal and the scattered direction in our scene coordinates
+    // (because these are 2 unit vectors).
+    *pdf = dot(uvw.axis[2], scattered->direction) / pi;
+    return true;
+}
+
+/*Old version of lambertian_scatter (pre book 3 section 8.3)
     // Find scatter direction
     random_unit_vector(scattered->direction);
     add(scattered->direction, (double *)rec->normal, scattered->direction);
@@ -96,7 +116,7 @@ bool lambertian_scatter(const struct Ray *r_in, const struct Hit_Record *rec,
 
     tex_value(attenuation, rec->mat_cfg->object.lambertian.tex, rec->u, rec->v, rec->p);
     return true;
-}
+*/
 
 /// @brief Book 3 Section 6.3 has us do this.
 /// @remark The point of section 6.3 is that even though the pScatter and p will cancel out, because
@@ -137,8 +157,9 @@ bool incorrect_lambertian_scatter(const struct Ray *r_in, const struct Hit_Recor
 double lambertian_scattering_pdf([[maybe_unused]] const struct Ray *r_in,
                                  const struct Hit_Record *rec, const struct Ray *scattered)
 {
-    vec3 temp;
-    double cos_theta = dot(rec->normal, unit(temp, (double *)scattered->direction));
+    vec3 temp1, temp2;
+    double cos_theta = dot(unit(temp1, (double *)rec->normal),
+                           unit(temp2, (double *)scattered->direction));
     return cos_theta < 0 ? 0 : cos_theta / pi;
 }
 
@@ -248,14 +269,25 @@ bool dielectric_scatter(const struct Ray *r_in, const struct Hit_Record *rec,
 /// @param attenuation The intensity of light lost
 /// @param scattered The outbound ray from hitting this material
 bool isotropic_scatter(const struct Ray *r_in, const struct Hit_Record *rec,
-                       color3 attenuation, struct Ray *scattered)
+                       color3 attenuation, struct Ray *scattered, double *pdf)
 {
     memcpy(scattered->origin, rec->p, sizeof(double) * 3);
     random_unit_vector(scattered->direction);
     scattered->tm = r_in->tm;
 
     tex_value(attenuation, rec->mat_cfg->object.isotropic.tex, rec->u, rec->v, rec->p);
+    *pdf = 1.0 / (4.0 * pi);
     return true;
+}
+
+/// @brief pScatter(..) = 1.0 / (4.0 * pi).
+/// Remember an Isotropic material is
+/// a material which scatters rays that hit it in a uniform (3D) random direction.
+double isotropic_scattering_pdf([[maybe_unused]] const struct Ray *r_in,
+                                [[maybe_unused]] const struct Hit_Record *rec,
+                                [[maybe_unused]] const struct Ray *scattered)
+{
+    return 1.0 / (4.0 * pi);
 }
 
 /// @brief Returns the light emitted by the Diffuse_Light material.
