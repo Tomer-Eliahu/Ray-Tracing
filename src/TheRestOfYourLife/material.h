@@ -291,7 +291,17 @@ double isotropic_scattering_pdf([[maybe_unused]] const struct Ray *r_in,
 }
 
 /// @brief Returns the light emitted by the Diffuse_Light material.
-static inline void emitted(color3 ret, const struct Diffuse_Light *light, double u, double v, const point3 p)
+static inline void emitted(color3 ret, const struct Hit_Record *rec,
+                           [[maybe_unused]] const struct Ray *r_in, double u, double v, const point3 p)
 {
+    if (!rec->front_face)
+    {
+        ret[0] = 0;
+        ret[1] = 0;
+        ret[2] = 0;
+        return;
+    }
+
+    const struct Diffuse_Light *light = &(rec->mat_cfg->object.light);
     tex_value(ret, light->tex, u, v, p);
 }

@@ -130,6 +130,39 @@ void ray_color(color3 color, const struct Ray *ray, int depth,
 
             if (lambertian_scatter(ray, &rec, attenuation, &scattered, &pdf_value))
             {
+
+                point3 on_light = {random_in_range(213, 343), 554, random_in_range(227, 332)};
+                vec3 to_light;
+                subtract(to_light, on_light, rec.p);
+
+                double distance_squared = len_squared(to_light);
+                unit(to_light, to_light);
+
+                if (dot(to_light, rec.normal) < 0)
+                {
+                    // set to black
+                    color[0] = 0;
+                    color[1] = 0;
+                    color[2] = 0;
+                    return;
+                }
+
+                double light_area = (343 - 213) * (332 - 227);
+                double light_cosine = fabs(to_light[1]);
+                if (light_cosine < 0.000001)
+                {
+                    // set to black
+                    color[0] = 0;
+                    color[1] = 0;
+                    color[2] = 0;
+                    return;
+                }
+
+                pdf_value = distance_squared / (light_cosine * light_area);
+                memcpy(scattered.origin, rec.p, 3 * sizeof(double));
+                memcpy(scattered.direction, to_light, 3 * sizeof(double));
+                scattered.tm = ray->tm;
+
                 // Recall Color_o(x,ωo,λ)= ∫ωi of A(x,ωi,ωo,λ)⋅pScatter(x,ωi,ωo,λ)⋅Color_i(x,ωi,λ)
                 // So we weight our scattering samples by pScatter which is scattering_pdf.
                 // Recall that the PDF we *choose* is p(..) which is the sampling PDF which is different
@@ -204,7 +237,7 @@ void ray_color(color3 color, const struct Ray *ray, int depth,
 
         case (enum Which_Material)Light:
 
-            emitted(color, &rec.mat_cfg->object.light, rec.u, rec.v, rec.p);
+            emitted(color, &rec, ray, rec.u, rec.v, rec.p);
             return;
 
             break;
