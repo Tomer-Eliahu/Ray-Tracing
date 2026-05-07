@@ -178,7 +178,7 @@ void ray_color(color3 color, const struct Ray *ray, int depth,
                 // So we will observe *correct* convergence but to a different image.
 
                 // In Book 3: Section 8.3 we correct this.
-                double scattering_pdf = lambertian_scattering_pdf(ray, &rec, &scattered);
+                double scattering_pdf = incorrect_lambertian_scattering_pdf(ray, &rec, &scattered);
 
                 // In the book this following line is not commented out but I think that is a mistake.
                 // pdf_value = scattering_pdf;
