@@ -376,3 +376,16 @@ In fact, most renderers just make mirrors a special case, and make the pScatter(
 implicit — our code currently does that.
 
 */
+
+/* Book 3 Section 6 notes:
+
+CRITICAL:
+
+    The key point is this: you sample (i.e. generate) scattering rays *however you like* in the scatter
+    function (you can sample uniformly in scatter for a Lambertian material).
+    The *correct* material behavior is a *predetermined* pScatter(..) (our scattering_pdf function).
+    *IF* in scatter function you correctly set the sampling pdf you calculate
+    accroding to how you decided to sample (so for this example
+    it would be uniform), you *WILL* converge to the correct image eventually.
+
+*/

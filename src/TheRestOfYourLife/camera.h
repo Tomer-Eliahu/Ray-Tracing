@@ -100,6 +100,33 @@ bool world_hit(const struct Hittable *world, int world_length, const struct Ray 
 }
 */
 
+/* Book 3 Section 6 notes:
+
+CRITICAL:
+
+    The key point is this: you sample (i.e. generate) scattering rays *however you like* in the scatter
+    function (you can sample uniformly in scatter for a Lambertian material).
+    The *correct* material behavior is a *predetermined* pScatter(..) (our scattering_pdf function).
+    *IF* in scatter function you correctly set the sampling pdf you calculate
+    accroding to how you decided to sample (so for this example
+    it would be uniform), you *WILL* converge to the correct image eventually.
+
+Recall Color_o(x,ωo,λ)= ∫ωi of A(x,ωi,ωo,λ)⋅pScatter(x,ωi,ωo,λ)⋅Color_i(x,ωi,λ)
+So we weight our scattering samples by pScatter which is scattering_pdf.
+Recall that the PDF we *choose* is p(..) which is the sampling PDF which is different
+than pScatter(..). pScatter(..) is determined externally by the actual physics
+(for example by the material kind).
+
+The point of Book 3: Section 6.3 is that even though using incorrect_lambertian_scatter
+*and* incorrect_lambertian_scattering_pdf here will cancel each other out in the above equation
+when using Monte-Carlo integration,
+because we generate the scattering rays differently, the image will be *materially* different.
+This is because the Color_i(x,wi,λ) term will be different between different materials.
+For example material A will send rays in some direction that material B might not and vice-versa.
+So we will observe *correct* convergence but to a different image.
+
+*/
+
 ///@brief Sets the color for a given scene ray.
 ///@param color This color will be set by this function.
 void ray_color(color3 color, const struct Ray *ray, int depth,
@@ -163,26 +190,7 @@ void ray_color(color3 color, const struct Ray *ray, int depth,
                 memcpy(scattered.direction, to_light, 3 * sizeof(double));
                 scattered.tm = ray->tm;
 
-                // Recall Color_o(x,ωo,λ)= ∫ωi of A(x,ωi,ωo,λ)⋅pScatter(x,ωi,ωo,λ)⋅Color_i(x,ωi,λ)
-                // So we weight our scattering samples by pScatter which is scattering_pdf.
-                // Recall that the PDF we *choose* is p(..) which is the sampling PDF which is different
-                // than pScatter(..). pScatter(..) is determined externally by the actual physics
-                // (for example by the material kind).
-
-                // The point of Book 3: Section 6.3 is that even though using incorrect_lambertian_scatter
-                // *and* incorrect_lambertian_scattering_pdf here will cancel each other out in the above equation
-                // when using Monte-Carlo integration,
-                // because we generate the scattering rays differently, the image will be *materially* different.
-                // This is because the Color_i(x,wi,λ) term will be different between different materials.
-                // For example material A will send rays in some direction that material B might not and vice-versa.
-                // So we will observe *correct* convergence but to a different image.
-
-                // In Book 3: Section 8.3 we correct this.
                 double scattering_pdf = incorrect_lambertian_scattering_pdf(ray, &rec, &scattered);
-
-                // In the book this following line is not commented out but I think that is a mistake.
-                // pdf_value = scattering_pdf;
-                // -- These are supposed to be the same if we did our sampling in lambertian_scatter correctly.
 
                 ray_color(color, &scattered, depth - 1, world, cfg);
                 multiply(color, attenuation, color);
