@@ -119,12 +119,6 @@ bool lambertian_scatter(const struct Ray *r_in, const struct Hit_Record *rec,
 */
 
 /// @brief Book 3 Section 6.3 has us do this (use both this and incorrect_lambertian_scattering_pdf).
-/// @remark The point of section 6.3 is that even though the pScatter and p will cancel out, because
-/// we now generate the scattering rays differently (use random_on_hemisphere in incorrect_lambertian_scatter)
-/// The image will be *materially* different.
-/// This is because the Color_i(x,wi,λ) term will be different between different materials.
-/// For example material A will send rays in some direction that material B might not and vice-versa.
-/// So we will observe *correct* convergence but to a different image.
 bool incorrect_lambertian_scatter(const struct Ray *r_in, const struct Hit_Record *rec,
                                   color3 attenuation, struct Ray *scattered)
 {
@@ -167,12 +161,6 @@ double lambertian_scattering_pdf([[maybe_unused]] const struct Ray *r_in,
 }
 
 /// @brief Book 3 Section 6.3 has us do this (use both this and incorrect_lambertian_scatter).
-/// @remark The point of section 6.3 is that even though the pScatter and p will cancel out, because
-/// we now generate the scattering rays differently (use random_on_hemisphere in incorrect_lambertian_scatter)
-/// The image will be *materially* different.
-/// This is because the Color_i(x,wi,λ) term will be different between different materials.
-/// For example material A will send rays in some direction that material B might not and vice-versa.
-/// So we will observe *correct* convergence but to a different image.
 double incorrect_lambertian_scattering_pdf([[maybe_unused]] const struct Ray *r_in,
                                            [[maybe_unused]] const struct Hit_Record *rec,
                                            [[maybe_unused]] const struct Ray *scattered)

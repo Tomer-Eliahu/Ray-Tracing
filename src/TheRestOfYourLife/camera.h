@@ -111,6 +111,9 @@ CRITICAL:
     accroding to how you decided to sample (so for this example
     it would be uniform), you *WILL* converge to the correct image eventually.
 
+    Remember in Monte-Carlo integration we average a lot of f(r)/p(r) to converage to the integral of f.
+    We can use any sampling PDF p(r) we want.
+
 Recall Color_o(x,ωo,λ)= ∫ωi of A(x,ωi,ωo,λ)⋅pScatter(x,ωi,ωo,λ)⋅Color_i(x,ωi,λ)
 So we weight our scattering samples by pScatter which is scattering_pdf.
 Recall that the PDF we *choose* is p(..) which is the sampling PDF which is different
@@ -119,11 +122,9 @@ than pScatter(..). pScatter(..) is determined externally by the actual physics
 
 The point of Book 3: Section 6.3 is that even though using incorrect_lambertian_scatter
 *and* incorrect_lambertian_scattering_pdf here will cancel each other out in the above equation
-when using Monte-Carlo integration,
-because we generate the scattering rays differently, the image will be *materially* different.
-This is because the Color_i(x,wi,λ) term will be different between different materials.
-For example material A will send rays in some direction that material B might not and vice-versa.
-So we will observe *correct* convergence but to a different image.
+when using Monte-Carlo integration, because we intergrate a different function f(r) (as pScatter() is different),
+the image will be *materially* different.
+We will observe *correct* convergence but to a different image.
 
 */
 
