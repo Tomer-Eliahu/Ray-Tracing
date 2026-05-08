@@ -5,6 +5,7 @@
 #include "rtweekend.h"
 #include "material.h"
 #include "bvh.h"
+#include "pdf.h"
 
 struct Camera_Config
 {
@@ -145,141 +146,118 @@ void ray_color(color3 color, const struct Ray *ray, int depth,
     struct Hit_Record rec;
 
     // Note that we are careful to set the min to 0.001 to get rid of shadow acne (see section 9.3).
-    if (BVH_node_hit(world, ray, (struct Interval){.min = 0.001, .max = infinity}, &rec))
+    if (!BVH_node_hit(world, ray, (struct Interval){.min = 0.001, .max = infinity}, &rec))
     {
-
-        struct Ray scattered;
-        color3 attenuation;
-        double pdf_value;
-
-        switch (rec.mat_cfg->which)
-        {
-        case (enum Which_Material)Lambertian:
-
-            if (lambertian_scatter(ray, &rec, attenuation, &scattered, &pdf_value))
-            {
-
-                point3 on_light = {random_in_range(213, 343), 554, random_in_range(227, 332)};
-                vec3 to_light;
-                subtract(to_light, on_light, rec.p);
-
-                double distance_squared = len_squared(to_light);
-                unit(to_light, to_light);
-
-                if (dot(to_light, rec.normal) < 0)
-                {
-                    // set to black
-                    color[0] = 0;
-                    color[1] = 0;
-                    color[2] = 0;
-                    return;
-                }
-
-                double light_area = (343 - 213) * (332 - 227);
-                double light_cosine = fabs(to_light[1]);
-                if (light_cosine < 0.000001)
-                {
-                    // set to black
-                    color[0] = 0;
-                    color[1] = 0;
-                    color[2] = 0;
-                    return;
-                }
-
-                pdf_value = distance_squared / (light_cosine * light_area);
-                memcpy(scattered.origin, rec.p, 3 * sizeof(double));
-                memcpy(scattered.direction, to_light, 3 * sizeof(double));
-                scattered.tm = ray->tm;
-
-                double scattering_pdf = incorrect_lambertian_scattering_pdf(ray, &rec, &scattered);
-
-                ray_color(color, &scattered, depth - 1, world, cfg);
-                multiply(color, attenuation, color);
-                scale(color, color, (scattering_pdf / pdf_value));
-
-                // Note the book returns return color_from_emission + color_from_scatter;
-                // But for all materials other than light color_from_emission is 0,0,0.
-                return;
-            }
-
-            // set to black
-            color[0] = 0;
-            color[1] = 0;
-            color[2] = 0;
-            return;
-
-            break;
-
-        case (enum Which_Material)Metal:
-
-            if (metal_scatter(ray, &rec, attenuation, &scattered))
-            {
-                ray_color(color, &scattered, depth - 1, world, cfg);
-                multiply(color, attenuation, color);
-                return;
-            }
-
-            // set to black
-            color[0] = 0;
-            color[1] = 0;
-            color[2] = 0;
-            return;
-
-            break;
-
-        case (enum Which_Material)Dielectric:
-
-            if (dielectric_scatter(ray, &rec, attenuation, &scattered))
-            {
-                ray_color(color, &scattered, depth - 1, world, cfg);
-                multiply(color, attenuation, color);
-                return;
-            }
-
-            // set to black
-            color[0] = 0;
-            color[1] = 0;
-            color[2] = 0;
-            return;
-
-            break;
-
-        case (enum Which_Material)Light:
-
-            emitted(color, &rec, ray, rec.u, rec.v, rec.p);
-            return;
-
-            break;
-
-        case (enum Which_Material)Isotropic:
-
-            if (isotropic_scatter(ray, &rec, attenuation, &scattered, &pdf_value))
-            {
-                double scattering_pdf = isotropic_scattering_pdf(ray, &rec, &scattered);
-                ray_color(color, &scattered, depth - 1, world, cfg);
-                multiply(color, attenuation, color);
-                scale(color, color, (scattering_pdf / pdf_value));
-                return;
-            }
-
-            // set to black
-            color[0] = 0;
-            color[1] = 0;
-            color[2] = 0;
-            return;
-
-            break;
-
-        default:
-            fprintf(stderr, "Could not identify Material of object hit!\n");
-            fflush(stderr);
-            exit(EXIT_FAILURE);
-            break;
-        }
+        // If the ray hits nothing, return the background color.
+        memcpy(color, cfg->background, sizeof(double) * 3);
+        return;
     }
 
-    // If the ray hits nothing, return the background color.
-    memcpy(color, cfg->background, sizeof(double) * 3);
+    struct Ray scattered;
+    color3 attenuation;
+    double pdf_value;
+
+    switch (rec.mat_cfg->which)
+    {
+    case (enum Which_Material)Lambertian:
+
+        if (lambertian_scatter(ray, &rec, attenuation, &scattered, &pdf_value))
+        {
+
+            struct Cos_Density surface_pdf;
+            init_cos_density(&surface_pdf, rec.normal);
+
+            memcpy(scattered.origin, rec.p, 3 * sizeof(double));
+            cos_density_generate(&surface_pdf, scattered.direction);
+            scattered.tm = ray->tm;
+
+            pdf_value = cos_density_value(&surface_pdf, scattered.direction);
+
+            double scattering_pdf = incorrect_lambertian_scattering_pdf(ray, &rec, &scattered);
+
+            ray_color(color, &scattered, depth - 1, world, cfg);
+            multiply(color, attenuation, color);
+            scale(color, color, (scattering_pdf / pdf_value));
+
+            // Note the book returns return color_from_emission + color_from_scatter;
+            // But for all materials other than light color_from_emission is 0,0,0.
+            return;
+        }
+
+        // set to black
+        color[0] = 0;
+        color[1] = 0;
+        color[2] = 0;
+        return;
+
+        break;
+
+    case (enum Which_Material)Metal:
+
+        if (metal_scatter(ray, &rec, attenuation, &scattered))
+        {
+            ray_color(color, &scattered, depth - 1, world, cfg);
+            multiply(color, attenuation, color);
+            return;
+        }
+
+        // set to black
+        color[0] = 0;
+        color[1] = 0;
+        color[2] = 0;
+        return;
+
+        break;
+
+    case (enum Which_Material)Dielectric:
+
+        if (dielectric_scatter(ray, &rec, attenuation, &scattered))
+        {
+            ray_color(color, &scattered, depth - 1, world, cfg);
+            multiply(color, attenuation, color);
+            return;
+        }
+
+        // set to black
+        color[0] = 0;
+        color[1] = 0;
+        color[2] = 0;
+        return;
+
+        break;
+
+    case (enum Which_Material)Light:
+
+        emitted(color, &rec, ray, rec.u, rec.v, rec.p);
+        return;
+
+        break;
+
+    case (enum Which_Material)Isotropic:
+
+        if (isotropic_scatter(ray, &rec, attenuation, &scattered, &pdf_value))
+        {
+            double scattering_pdf = isotropic_scattering_pdf(ray, &rec, &scattered);
+            ray_color(color, &scattered, depth - 1, world, cfg);
+            multiply(color, attenuation, color);
+            scale(color, color, (scattering_pdf / pdf_value));
+            return;
+        }
+
+        // set to black
+        color[0] = 0;
+        color[1] = 0;
+        color[2] = 0;
+        return;
+
+        break;
+
+    default:
+        fprintf(stderr, "Could not identify Material of object hit!\n");
+        fflush(stderr);
+        exit(EXIT_FAILURE);
+        break;
+    }
 
     /*OLD Approach instead of uniform background color:
         You could always pass in a boolean to switch between
@@ -319,7 +297,7 @@ void camera_initialize(const struct Camera_Config *cfg, struct Camera_Info *cam_
 
     // Calculate the image height, and ensure that it's at least 1.
 
-    cam_info->image_height = (int)cfg->image_width / cfg->aspect_ratio;
+    cam_info->image_height = (int)(cfg->image_width / cfg->aspect_ratio);
     cam_info->image_height = (cam_info->image_height < 1) ? 1 : cam_info->image_height;
 
     cam_info->sqrt_spp = (int)sqrt(cfg->samples_per_pixel);

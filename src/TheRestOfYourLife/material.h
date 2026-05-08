@@ -288,6 +288,7 @@ double isotropic_scattering_pdf([[maybe_unused]] const struct Ray *r_in,
 static inline void emitted(color3 ret, const struct Hit_Record *rec,
                            [[maybe_unused]] const struct Ray *r_in, double u, double v, const point3 p)
 {
+    // The light is two-sided and we want to have the light just emit down.
     if (!rec->front_face)
     {
         ret[0] = 0;
