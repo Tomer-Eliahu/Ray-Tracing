@@ -171,15 +171,29 @@ void ray_color(color3 color, const struct Ray *ray, int depth,
             // That means we have a global variable struct Hittable *g_lights.
             if (g_lights != NULL)
             {
-                // Light Sampling
-                struct Hittable_PDF light_pdf = {.objects = g_lights};
-                memcpy(light_pdf.origin, rec.p, 3 * sizeof(double));
+                // Sample according to a mixture density of the cosine sampling and of the light sampling.
+                // Doing importance sampling like so (we aim that our mixture pdf closely approximates f
+                // in the monte-carlo integration of the rendering equation), will enable us
+                // to converage to the correct scene with less samples (faster).
+                // Please see Section 6: Playing with Importance Sampling notes in integrate_x_sq.c
+                // for more details if needed.
+
+                // Light sampling
+                struct PDF light_pdf = {.which = Hittable_PDF,
+                                        .pdf.hittable_pdf = (struct Hittable_PDF){.objects = g_lights}};
+                memcpy(light_pdf.pdf.hittable_pdf.origin, rec.p, 3 * sizeof(double));
+
+                // Cosine sampling
+                struct PDF cos_pdf = {.which = Cos_Density};
+                init_cos_density(&cos_pdf.pdf.cos_den, rec.normal);
+
+                struct Mixture_PDF mix_pdf = {.p = {&light_pdf, &cos_pdf}};
 
                 memcpy(scattered.origin, rec.p, 3 * sizeof(double));
-                hittable_pdf_generate(&light_pdf, scattered.direction);
+                mixture_pdf_generate(&mix_pdf, scattered.direction);
                 scattered.tm = ray->tm;
 
-                pdf_value = hittable_pdf_value(&light_pdf, scattered.direction);
+                pdf_value = mixture_pdf_value(&mix_pdf, scattered.direction);
             }
 
             double scattering_pdf = incorrect_lambertian_scattering_pdf(ray, &rec, &scattered);

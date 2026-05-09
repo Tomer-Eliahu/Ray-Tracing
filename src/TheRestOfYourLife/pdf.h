@@ -10,6 +10,7 @@
 // Return the sampling_pdf value that a certain sample corresponds to.
 
 // Forward Declarations
+struct PDF;
 double pdf_value(const struct PDF *gen_pdf, const vec3 direction);
 double *pdf_generate(const struct PDF *gen_pdf, vec3 ret);
 
@@ -28,7 +29,7 @@ double *sphere_pdf_generate(vec3 ret)
 }
 
 /// @brief A sampling PDF of cos density about a surface normal (or some other vector) n.
-/// Must be init with cos_density_init.
+/// Must be init with init_cos_density.
 struct Cos_Density
 {
     struct ONB onb;
@@ -108,13 +109,13 @@ double *hittable_pdf_generate(const struct Hittable_PDF *hit_pdf, vec3 ret)
     }
 }
 
-/// @brief Recall any weighted average of PDFs is also a PDF.
-/// As long as the weights are positive and add up to any one, we have a new PDF.
+/// @brief Recall any weighted average (as long as the weights are positive and add up to one)
+/// of PDFs is also a PDF.
 /// This in particular, is Mixture_pdf = 0.5*p_1 + 0.5*p_2 for PDFs p_1 and p_2.
 struct Mixture_PDF
 {
     struct PDF *p[2];
-}
+};
 
 /// @brief Returns the sampling mixture_pdf value for the sample direction.
 double mixture_pdf_value(const struct Mixture_PDF *mix_pdf, const vec3 direction)
@@ -135,7 +136,7 @@ double *mixture_pdf_generate(const struct Mixture_PDF *mix_pdf, vec3 ret)
 
 enum Which_PDF
 {
-    Sphere,
+    Sphere_PDF,
     Cos_Density,
     Hittable_PDF,
     Mixture_PDF,
@@ -161,7 +162,7 @@ double pdf_value(const struct PDF *gen_pdf, const vec3 direction)
 {
     switch (gen_pdf->which)
     {
-    case (enum Which_PDF)Sphere:
+    case (enum Which_PDF)Sphere_PDF:
 
         return sphere_pdf_value(direction);
         break;
@@ -195,7 +196,7 @@ double *pdf_generate(const struct PDF *gen_pdf, vec3 ret)
 
     switch (gen_pdf->which)
     {
-    case (enum Which_PDF)Sphere:
+    case (enum Which_PDF)Sphere_PDF:
 
         return sphere_pdf_generate(ret);
         break;
