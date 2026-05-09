@@ -129,6 +129,17 @@ We will observe *correct* convergence but to a different image.
 
 */
 
+/* Book 3: Section 11 notes
+
+The mixture-density approach is preferable to the traditional shadow rays approach, because in addition to lights,
+you can sample windows or bright cracks under doors or whatever else you think might be bright — or important.
+
+That is, the mixture-density approach is better when the lights in your scene are complicated.
+Shadow rays tend to be cheaper for a crude result than mixture-density
+and is becoming increasingly common in realtime.
+
+*/
+
 // We do light sampling
 struct Hittable *g_lights = nullptr;
 
