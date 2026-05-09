@@ -21,8 +21,10 @@ or this [VS Code extension] (what I used).
 I converted some images from ppm to png, so they can be displayed here:
 
 <p align="center">
-  <img src="images\20_book_one_final_render.png" alt="Book One Final Render"/>
-  Book One Final Render
+  <img src="images\20_book_one_final_render.png" alt="Book 1: Final Render"/>
+</p>
+<p align="center">
+  Book 1: Final Render
 </p>
 
 <p align="center">
@@ -40,10 +42,10 @@ I converted some images from ppm to png, so they can be displayed here:
 </p>
 
 <p align="center">
-  <img src="images\40_book_two_final_render_high_quality.png" alt="Book 2 Final Render"/>
+  <img src="images\40_book_two_final_render_high_quality.png" alt="Book 2: Final Render"/>
 </p>
 <p align="center">
-  Book 2 Final Render
+  Book 2: Final Render
 </p>
 
 ### Note
@@ -53,3 +55,10 @@ to be involved in this field professionally:
 > related to ray tracing. We will be diving into the math of creating a very serious ray tracer. When you are done, you
 > should be well equipped to use and modify the various commercial ray tracers found in many popular domains, such as
 > the movie, television, product design, and architecture industries.
+
+<p align="center">
+  <img src="images\48_Cornell_box_mixture_density_of_cosine_and_light_sampling_HQ.png" alt="Book 3: Cornell box with mixture density of cosine and light sampling"/>
+</p>
+<p align="center">
+  Book 3: Cornell box with mixture density sampling pdf
+</p>
