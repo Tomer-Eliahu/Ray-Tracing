@@ -47,6 +47,9 @@ struct Quad
     /// @brief D in the plane equation Ax + By + Cz = D (where (x,y,z) is any point on the plane)
     /// and (A, B, C) is the normal vector to the plane.
     double D;
+
+    /// @brief The area spanned by this quad. This is exactly the magnitude of cross(u,v).
+    double area;
 };
 
 /// @brief Initializes the bounding box for a *stationary* quad.
@@ -75,6 +78,8 @@ void quad_init(struct Quad *quad)
 {
     // Note we now this cross won't result in a zero vector as u and v in a quad are not parallel.
     cross(quad->normal, quad->u, quad->v);
+
+    quad->area = len(quad->normal);
 
     scale(quad->w, quad->normal, 1.0 / dot(quad->normal, quad->normal));
 
@@ -164,3 +169,39 @@ void quad_moving_bound(struct Quad *quad)
 {
 }
 */
+
+/// @brief Compute the pdf value of a sample according to the light sampling PDF in book 3 section 9.
+/// @param quad The light.
+/// @param origin The hit point of the ray with the non-light object.
+/// @param direction A direction going from origin towards the light (the sample).
+double quad_pdf_value(const struct Quad *quad, const point3 origin, const vec3 direction)
+{
+    struct Hit_Record rec;
+    struct Ray r;
+    memcpy(r.origin, origin, sizeof(double) * 3);
+    memcpy(r.direction, direction, sizeof(double) * 3);
+
+    if (!quad_hit(quad, &r, (struct Interval){.min = 0.001, .max = infinity}, &rec))
+        return 0;
+
+    // len(direction) * rec.t  is the distance
+    double distance_squared = rec.t * rec.t * len_squared(direction);
+    double cosine = fabs(dot(direction, rec.normal) / len(direction));
+
+    return distance_squared / (cosine * quad->area);
+}
+
+/// @brief Generate a random sample (a direction from a non-light object towards the light)
+/// accroding to the light sampling PDF in Book 3 section 9.
+/// We pick a random point p on the light and return p-origin.
+/// @param quad The light (or some other quad we want to sample towards).
+/// @param origin Would usually be the hit point (rec.p) of the ray with the non-light object.
+double *quad_random(const struct Quad *quad, const point3 origin, vec3 ret)
+{
+    vec3 p, temp1, temp2;
+    scale(temp1, (double *)quad->u, random_zero_to_one());
+    scale(temp2, (double *)quad->v, random_zero_to_one());
+    add(p, (double *)quad->Q, add(temp1, temp1, temp2));
+
+    return subtract(ret, p, (double *)origin);
+}

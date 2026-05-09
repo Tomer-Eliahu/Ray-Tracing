@@ -129,8 +129,13 @@ We will observe *correct* convergence but to a different image.
 
 */
 
+// We do light sampling
+struct Hittable *g_lights = nullptr;
+
 ///@brief Sets the color for a given scene ray.
 ///@param color This color will be set by this function.
+///@remark The book adds const struct Hittable *lights as an argument but as we do not want to brick old code,
+/// we simply make lights a global instead.
 void ray_color(color3 color, const struct Ray *ray, int depth,
                const struct BVH_Node *world, const struct Camera_Config *cfg)
 {
@@ -163,15 +168,19 @@ void ray_color(color3 color, const struct Ray *ray, int depth,
 
         if (lambertian_scatter(ray, &rec, attenuation, &scattered, &pdf_value))
         {
+            // That means we have a global variable struct Hittable *g_lights.
+            if (g_lights != NULL)
+            {
+                // Light Sampling
+                struct Hittable_PDF light_pdf = {.objects = g_lights};
+                memcpy(light_pdf.origin, rec.p, 3 * sizeof(double));
 
-            struct Cos_Density surface_pdf;
-            init_cos_density(&surface_pdf, rec.normal);
+                memcpy(scattered.origin, rec.p, 3 * sizeof(double));
+                hittable_pdf_generate(&light_pdf, scattered.direction);
+                scattered.tm = ray->tm;
 
-            memcpy(scattered.origin, rec.p, 3 * sizeof(double));
-            cos_density_generate(&surface_pdf, scattered.direction);
-            scattered.tm = ray->tm;
-
-            pdf_value = cos_density_value(&surface_pdf, scattered.direction);
+                pdf_value = hittable_pdf_value(&light_pdf, scattered.direction);
+            }
 
             double scattering_pdf = incorrect_lambertian_scattering_pdf(ray, &rec, &scattered);
 

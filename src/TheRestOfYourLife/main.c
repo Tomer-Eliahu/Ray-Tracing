@@ -653,6 +653,11 @@ void cornell_box()
     memcpy(&world[actual_world_len], &box2[12], sizeof(struct Hittable) * 6);
     actual_world_len += 6;
 
+    // Light Sources (Note these *ARE* already in the scene and properly initialized)
+    // We can avoid the book's approach of making and properly initializing duplicates here
+    // as we only have 1 light source so far.
+    g_lights = &world[2];
+
     // We rely on the OS to cleanup the malloced memory
     // as we need it for the rest of the program's duration anyhow.
     struct BVH_Node *world_tree = BVH_construct_tree(world, actual_world_len);
@@ -661,7 +666,7 @@ void cornell_box()
         {
             .aspect_ratio = 1.0,
             .image_width = 600,
-            .samples_per_pixel = 1000,
+            .samples_per_pixel = 10,
             .max_depth = 50,
             .background = {0, 0, 0},
 
