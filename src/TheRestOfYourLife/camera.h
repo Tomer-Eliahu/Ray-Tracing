@@ -227,9 +227,10 @@ void ray_color(color3 color, const struct Ray *ray, int depth,
 
     case (enum Which_Material)Metal:
 
-        if (metal_scatter(ray, &rec, srec.attenuation, &scattered))
+        if (metal_scatter(ray, &rec, &srec))
         {
-            ray_color(color, &scattered, depth - 1, world, cfg);
+            assert(srec.skip_pdf);
+            ray_color(color, &srec.skip_pdf_ray, depth - 1, world, cfg);
             multiply(color, srec.attenuation, color);
             return;
         }
@@ -244,9 +245,10 @@ void ray_color(color3 color, const struct Ray *ray, int depth,
 
     case (enum Which_Material)Dielectric:
 
-        if (dielectric_scatter(ray, &rec, srec.attenuation, &scattered))
+        if (dielectric_scatter(ray, &rec, &srec))
         {
-            ray_color(color, &scattered, depth - 1, world, cfg);
+            assert(srec.skip_pdf);
+            ray_color(color, &srec.skip_pdf_ray, depth - 1, world, cfg);
             multiply(color, srec.attenuation, color);
             return;
         }

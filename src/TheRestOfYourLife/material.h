@@ -96,7 +96,6 @@ struct Material_Cfg
 /// @param r_in Incoming ray
 /// @param srec The scatter record which records:
 /// @param attenuation The intensity of light lost
-/// @param scattered The outbound ray from hitting this material
 bool lambertian_scatter([[maybe_unused]] const struct Ray *r_in, const struct Hit_Record *rec,
                         struct Scatter_Record *srec)
 {
@@ -181,11 +180,10 @@ double incorrect_lambertian_scattering_pdf([[maybe_unused]] const struct Ray *r_
 
 /// @brief Metal material reflectance
 /// @param r_in Incoming ray
+/// @param srec The scatter record which records:
 /// @param attenuation The intensity of light lost
-/// @param scattered The outbound ray from hitting this material
-/// @return
-bool metal_scatter(const struct Ray *r_in, const struct Hit_Record *rec,
-                   color3 attenuation, struct Ray *scattered)
+/// @param skip_pdf_ray The outbound ray from hitting this material
+bool metal_scatter(const struct Ray *r_in, const struct Hit_Record *rec, struct Scatter_Record *srec)
 {
     vec3 reflected;
     reflect(reflected, (double *)r_in->direction, rec->normal);
@@ -198,15 +196,22 @@ bool metal_scatter(const struct Ray *r_in, const struct Hit_Record *rec,
     add(reflected, unit(reflected, reflected),
         scale(fuzz_applied, fuzz_applied, rec->mat_cfg->object.metal.fuzz));
 
-    memcpy(scattered->origin, rec->p, 3 * sizeof(double));
-    memcpy(scattered->direction, reflected, 3 * sizeof(double));
-    scattered->tm = r_in->tm;
+    // Note that if the fuzziness is nonzero, this surface isn’t really ideally specular,
+    // but the implicit sampling works just like it did before.
+    // We're effectively skipping all of our PDF work for the materials that we're treating specularly.
 
-    memcpy(attenuation, rec->mat_cfg->object.metal.albedo, 3 * sizeof(double));
+    memcpy(srec->attenuation, rec->mat_cfg->object.metal.albedo, 3 * sizeof(double));
+
+    srec->pdf_ptr = nullptr;
+    srec->skip_pdf = true;
+
+    memcpy(srec->skip_pdf_ray.origin, rec->p, 3 * sizeof(double));
+    memcpy(srec->skip_pdf_ray.direction, reflected, 3 * sizeof(double));
+    srec->skip_pdf_ray.tm = r_in->tm;
 
     // Return true only if we scatter above the surface (adding fuzz may mean we scatter below it).
     // If we scatter below, we simply will absorb the incoming ray.
-    return (dot(scattered->direction, rec->normal) > 0);
+    return (dot(srec->skip_pdf_ray.direction, rec->normal) > 0);
 }
 
 /// @brief Use Schlick's approximation for reflectance.
@@ -230,15 +235,18 @@ static double reflectance(double cosine, double refraction_index)
 
 /// @brief Dielectric material *refraction*
 /// @param r_in Incoming ray
+/// @param srec The scatter record which records:
 /// @param attenuation The intensity of light lost
-/// @param scattered The outbound ray from hitting this material
-bool dielectric_scatter(const struct Ray *r_in, const struct Hit_Record *rec,
-                        color3 attenuation, struct Ray *scattered)
+/// @param skip_pdf_ray The outbound ray from hitting this material
+bool dielectric_scatter(const struct Ray *r_in, const struct Hit_Record *rec, struct Scatter_Record *srec)
 {
     // Set to white
-    attenuation[0] = 1.0;
-    attenuation[1] = 1.0;
-    attenuation[2] = 1.0;
+    srec->attenuation[0] = 1.0;
+    srec->attenuation[1] = 1.0;
+    srec->attenuation[2] = 1.0;
+
+    srec->pdf_ptr = nullptr;
+    srec->skip_pdf = true;
 
     double refraction_index = rec->mat_cfg->object.dielectric.refraction_index;
 
@@ -255,15 +263,15 @@ bool dielectric_scatter(const struct Ray *r_in, const struct Hit_Record *rec,
 
     if (cannot_refract || reflectance(cos_theta, ri) > random_zero_to_one())
     {
-        reflect(scattered->direction, unit_direction, rec->normal);
+        reflect(srec->skip_pdf_ray.direction, unit_direction, rec->normal);
     }
     else
     {
-        refract(scattered->direction, unit_direction, rec->normal, ri);
+        refract(srec->skip_pdf_ray.direction, unit_direction, rec->normal, ri);
     }
 
-    memcpy(scattered->origin, rec->p, 3 * sizeof(double));
-    scattered->tm = r_in->tm;
+    memcpy(srec->skip_pdf_ray.origin, rec->p, 3 * sizeof(double));
+    srec->skip_pdf_ray.tm = r_in->tm;
 
     return true;
 }
@@ -271,7 +279,6 @@ bool dielectric_scatter(const struct Ray *r_in, const struct Hit_Record *rec,
 /// @brief Isotropic material reflectance
 /// @param r_in Incoming ray
 /// @param attenuation The intensity of light lost
-/// @param scattered The outbound ray from hitting this material
 /// @remark Remember an Isotropic material is a material which scatters rays
 /// that hit it in a uniform (3D) random direction.
 bool isotropic_scatter([[maybe_unused]] const struct Ray *r_in, const struct Hit_Record *rec,

@@ -637,8 +637,11 @@ void cornell_box()
         quad_init(&world[i].object.quad);
     }
 
+    const struct Material_Cfg aluminum = {.which = Metal,
+                                          .object.metal = {.albedo = {0.8, 0.85, 0.88}, .fuzz = 0.0}};
+
     struct Hittable *box1 = world_add_box_rotated_translated((point3){0, 0, 0}, (point3){165, 330, 165},
-                                                             &white_mat,
+                                                             &aluminum,
                                                              (vec3){265, 0, 295}, 15);
 
     // Copy box1 (just the final 6 quads post operations) into world
