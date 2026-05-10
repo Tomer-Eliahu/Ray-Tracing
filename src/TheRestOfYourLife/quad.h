@@ -17,12 +17,12 @@ and extending two units in the Z direction and one unit in the Y
 direction would have values Q=(0,0,0),u=(0,0,2),and v=(0,1,0).
 
 */
-
+#include "rtweekend.h"
 #include "hittable.h"
 #include "hittable_list.h"
-#include "rtweekend.h"
-#include "material.h"
 #include "aabb.h"
+
+struct Material_Cfg;
 
 /// @brief A Quadrilateral. **Must** call quad_init() after init the struct with Q, u, and v values.
 struct Quad

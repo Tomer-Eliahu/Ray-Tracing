@@ -2,8 +2,26 @@
 
 #include "vec3.h"
 #include "hittable.h"
+#include "hittable_list.h"
 #include "texture.h"
-#include "onb.h"
+#include "pdf.h"
+
+/// @brief Note pdf_ptr uses malloc and must later be **freed** by calling free_pdf_ptr.
+struct Scatter_Record
+{
+    color3 attenuation;
+    struct PDF *pdf_ptr; //< Uses malloc and **must be freed after use** by calling free_pdf_ptr.
+
+    /// @brief True for specular rays (glass and metal) or sometimes true for a a material
+    /// — like varnished wood — that is partially ideal specular (the polish) and partially diffuse (the wood).
+    /// Note that for such materials we are basically implictly doing the mixture density approach
+    /// (one of the PDFs is essentially 0 in all but one direction, so we can change the diffuse PDF to
+    /// be zero in that direction with no noticeable difference in practice). But for the math
+    /// to remain correct we need to multiply the specular PDF and the diffuse PDF
+    /// by s or (1-s) where s is the prob of a specular ray (according to the formula of mixture density).
+    bool skip_pdf;
+    struct Ray skip_pdf_ray; //< The specular ray.
+};
 
 struct Lambertian
 {
@@ -76,27 +94,19 @@ struct Material_Cfg
 
 /// @brief Lambertian (diffuse) material reflectance
 /// @param r_in Incoming ray
+/// @param srec The scatter record which records:
 /// @param attenuation The intensity of light lost
 /// @param scattered The outbound ray from hitting this material
-/// @return
-bool lambertian_scatter(const struct Ray *r_in, const struct Hit_Record *rec,
-                        color3 attenuation, struct Ray *scattered, double *pdf)
+bool lambertian_scatter([[maybe_unused]] const struct Ray *r_in, const struct Hit_Record *rec,
+                        struct Scatter_Record *srec)
 {
-    struct ONB uvw;
-    init_onb(&uvw, rec->normal);
-    vec3 rand_vec;
+    tex_value(srec->attenuation, rec->mat_cfg->object.lambertian.tex, rec->u, rec->v, rec->p);
 
-    random_cosine_direction(rand_vec);
-    unit(scattered->direction,
-         onb_transform(scattered->direction, &uvw, rand_vec));
-    memcpy(scattered->origin, rec->p, 3 * sizeof(double));
-    scattered->tm = r_in->tm;
-
-    tex_value(attenuation, rec->mat_cfg->object.lambertian.tex, rec->u, rec->v, rec->p);
-    // The pdf value is cos(θ)/π where θ is the angle
-    // betwen the surface normal and the scattered direction in our scene coordinates
-    // (because these are 2 unit vectors).
-    *pdf = dot(uvw.axis[2], scattered->direction) / pi;
+    // Cosine sampling
+    srec->pdf_ptr = new_pdf_ptr();
+    *(srec->pdf_ptr) = (struct PDF){.which = Cos_Density};
+    init_cos_density(&srec->pdf_ptr->pdf.cos_den, rec->normal);
+    srec->skip_pdf = false;
     return true;
 }
 
@@ -262,15 +272,15 @@ bool dielectric_scatter(const struct Ray *r_in, const struct Hit_Record *rec,
 /// @param r_in Incoming ray
 /// @param attenuation The intensity of light lost
 /// @param scattered The outbound ray from hitting this material
-bool isotropic_scatter(const struct Ray *r_in, const struct Hit_Record *rec,
-                       color3 attenuation, struct Ray *scattered, double *pdf)
+/// @remark Remember an Isotropic material is a material which scatters rays
+/// that hit it in a uniform (3D) random direction.
+bool isotropic_scatter([[maybe_unused]] const struct Ray *r_in, const struct Hit_Record *rec,
+                       struct Scatter_Record *srec)
 {
-    memcpy(scattered->origin, rec->p, sizeof(double) * 3);
-    random_unit_vector(scattered->direction);
-    scattered->tm = r_in->tm;
-
-    tex_value(attenuation, rec->mat_cfg->object.isotropic.tex, rec->u, rec->v, rec->p);
-    *pdf = 1.0 / (4.0 * pi);
+    tex_value(srec->attenuation, rec->mat_cfg->object.isotropic.tex, rec->u, rec->v, rec->p);
+    srec->pdf_ptr = new_pdf_ptr();
+    *(srec->pdf_ptr) = (struct PDF){.which = Sphere_PDF};
+    srec->skip_pdf = false;
     return true;
 }
 

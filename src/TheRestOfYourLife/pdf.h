@@ -1,7 +1,8 @@
 #pragma once
-#include "onb.h"
 #include "rtweekend.h"
 #include "hittable_list.h"
+#include "quad.h"
+#include "onb.h"
 
 /*Book 3: Section 10: Mixture Densities */
 
@@ -43,7 +44,11 @@ void init_cos_density(struct Cos_Density *cos_den, const vec3 n)
 /// @brief Returns the sampling PDF (that has cos_density) value for the sample direction.
 double cos_density_value(const struct Cos_Density *cos_den, const vec3 direction)
 {
+    // The pdf value is cos(θ)/π where θ is the angle
+    // betwen the surface normal and the scattered direction in our scene coordinates
+
     vec3 temp;
+    // Because these are 2 unit vectors.
     double cosine_theta = dot(unit(temp, (double *)direction), cos_den->onb.axis[2]);
     return fmax(0, cosine_theta / pi);
 }
@@ -218,6 +223,64 @@ double *pdf_generate(const struct PDF *gen_pdf, vec3 ret)
 
     default:
         fprintf(stderr, "Could not identify PDF kind in pdf_generate!\n");
+        fflush(stderr);
+        exit(EXIT_FAILURE);
+        break;
+    }
+}
+
+/// @brief Malloc a new pointer to a PDF and returns said ptr.
+/// The caller must later **free** this ptr which is done by calling free_pdf_ptr.
+struct PDF *new_pdf_ptr()
+{
+    struct PDF *p = malloc(sizeof(struct PDF));
+    if (p == NULL)
+    {
+        fprintf(stderr, "Could not malloc struct PDF in new_pdf_ptr!\n");
+        fflush(stderr);
+        exit(EXIT_FAILURE);
+    }
+    return p;
+}
+
+/// @brief Takes a malloced ptr to a struct PDF and frees it.
+/// Note that as p can point to other struct PDF's in it (if it is a Mixture_PDF),
+/// this function recurses as needed and assumes all inner PDF's are also malloced.
+/// If inner PDF's are not malloced, just call free(p) instead of this function.
+void free_pdf_ptr(struct PDF *p)
+{
+    if (p == NULL)
+        return;
+
+    switch (p->which)
+    {
+    case (enum Which_PDF)Sphere_PDF:
+        // has no associated struct.
+        free(p);
+        return;
+        break;
+
+    case (enum Which_PDF)Cos_Density:
+        // struct Cos_Density is fully stack allocated.
+        free(p);
+        return;
+        break;
+
+    case (enum Which_PDF)Hittable_PDF:
+        // as objects in struct Hittable_PDF point to a global variable, this is enough.
+        free(p);
+        return;
+        break;
+
+    case (enum Which_PDF)Mixture_PDF:
+        free_pdf_ptr(p->pdf.mixture_pdf.p[0]);
+        free_pdf_ptr(p->pdf.mixture_pdf.p[1]);
+        free(p);
+        return;
+        break;
+
+    default:
+        fprintf(stderr, "Could not identify PDF kind in free_pdf_ptr!\n");
         fflush(stderr);
         exit(EXIT_FAILURE);
         break;

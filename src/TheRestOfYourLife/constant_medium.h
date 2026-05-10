@@ -16,7 +16,6 @@ let’s start with a volume of constant density (a constant medium).
 */
 
 #include "rtweekend.h"
-#include "material.h"
 #include "aabb.h"
 
 /// @brief A Constant Medium. That is a volume (smoke/fog/mist) with constant density.
@@ -45,6 +44,7 @@ struct Constant_Medium
 // Needed forward declarations (to maintain the book's header only style)
 struct Hittable;
 struct BVH_Node;
+struct Material_Cfg;
 bool BVH_node_hit(const struct BVH_Node *node, const struct Ray *r, struct Interval ray_t, struct Hit_Record *rec);
 struct BVH_Node *BVH_construct_tree(const struct Hittable *world, int world_length);
 static inline void helper_init_cm_bbox(struct Constant_Medium *cm);

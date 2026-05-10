@@ -1,10 +1,11 @@
 #pragma once
 
+#include "rtweekend.h"
 #include "hittable.h"
 #include "hittable_list.h"
-#include "rtweekend.h"
-#include "material.h"
 #include "aabb.h"
+
+struct Material_Cfg;
 
 struct Sphere
 {

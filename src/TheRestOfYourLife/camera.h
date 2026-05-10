@@ -169,48 +169,47 @@ void ray_color(color3 color, const struct Ray *ray, int depth,
         return;
     }
 
+    struct Scatter_Record srec;
     struct Ray scattered;
-    color3 attenuation;
     double pdf_value;
 
     switch (rec.mat_cfg->which)
     {
     case (enum Which_Material)Lambertian:
 
-        if (lambertian_scatter(ray, &rec, attenuation, &scattered, &pdf_value))
+        if (lambertian_scatter(ray, &rec, &srec))
         {
-            // That means we have a global variable struct Hittable *g_lights.
-            if (g_lights != NULL)
-            {
-                // Sample according to a mixture density of the cosine sampling and of the light sampling.
-                // Doing importance sampling like so (we aim that our mixture pdf closely approximates f
-                // in the monte-carlo integration of the rendering equation), will enable us
-                // to converage to the correct scene with less samples (faster).
-                // Please see Section 6: Playing with Importance Sampling notes in integrate_x_sq.c
-                // for more details if needed.
+            // That means we have a valid global variable struct Hittable *g_lights.
+            assert(g_lights != NULL);
 
-                // Light sampling
-                struct PDF light_pdf = {.which = Hittable_PDF,
-                                        .pdf.hittable_pdf = (struct Hittable_PDF){.objects = g_lights}};
-                memcpy(light_pdf.pdf.hittable_pdf.origin, rec.p, 3 * sizeof(double));
+            // Sample according to a mixture density of the cosine sampling and of the light sampling.
+            // Doing importance sampling like so (we aim that our mixture pdf closely approximates f
+            // in the monte-carlo integration of the rendering equation), will enable us
+            // to converage to the correct scene with less samples (faster).
+            // Please see Section 6: Playing with Importance Sampling notes in integrate_x_sq.c
+            // for more details if needed.
 
-                // Cosine sampling
-                struct PDF cos_pdf = {.which = Cos_Density};
-                init_cos_density(&cos_pdf.pdf.cos_den, rec.normal);
+            // Light sampling
+            struct PDF light_pdf = {.which = Hittable_PDF,
+                                    .pdf.hittable_pdf = (struct Hittable_PDF){.objects = g_lights}};
+            memcpy(light_pdf.pdf.hittable_pdf.origin, rec.p, 3 * sizeof(double));
 
-                struct Mixture_PDF mix_pdf = {.p = {&light_pdf, &cos_pdf}};
+            // Cosine sampling (srec.pdf_ptr)
+            struct Mixture_PDF mix_pdf = {.p = {&light_pdf, srec.pdf_ptr}};
 
-                memcpy(scattered.origin, rec.p, 3 * sizeof(double));
-                mixture_pdf_generate(&mix_pdf, scattered.direction);
-                scattered.tm = ray->tm;
+            memcpy(scattered.origin, rec.p, 3 * sizeof(double));
+            mixture_pdf_generate(&mix_pdf, scattered.direction);
+            scattered.tm = ray->tm;
 
-                pdf_value = mixture_pdf_value(&mix_pdf, scattered.direction);
-            }
+            pdf_value = mixture_pdf_value(&mix_pdf, scattered.direction);
 
-            double scattering_pdf = incorrect_lambertian_scattering_pdf(ray, &rec, &scattered);
+            // free pdf_ptr
+            free_pdf_ptr(srec.pdf_ptr);
+
+            double scattering_pdf = lambertian_scattering_pdf(ray, &rec, &scattered);
 
             ray_color(color, &scattered, depth - 1, world, cfg);
-            multiply(color, attenuation, color);
+            multiply(color, srec.attenuation, color);
             scale(color, color, (scattering_pdf / pdf_value));
 
             // Note the book returns return color_from_emission + color_from_scatter;
@@ -228,10 +227,10 @@ void ray_color(color3 color, const struct Ray *ray, int depth,
 
     case (enum Which_Material)Metal:
 
-        if (metal_scatter(ray, &rec, attenuation, &scattered))
+        if (metal_scatter(ray, &rec, srec.attenuation, &scattered))
         {
             ray_color(color, &scattered, depth - 1, world, cfg);
-            multiply(color, attenuation, color);
+            multiply(color, srec.attenuation, color);
             return;
         }
 
@@ -245,10 +244,10 @@ void ray_color(color3 color, const struct Ray *ray, int depth,
 
     case (enum Which_Material)Dielectric:
 
-        if (dielectric_scatter(ray, &rec, attenuation, &scattered))
+        if (dielectric_scatter(ray, &rec, srec.attenuation, &scattered))
         {
             ray_color(color, &scattered, depth - 1, world, cfg);
-            multiply(color, attenuation, color);
+            multiply(color, srec.attenuation, color);
             return;
         }
 
@@ -269,11 +268,32 @@ void ray_color(color3 color, const struct Ray *ray, int depth,
 
     case (enum Which_Material)Isotropic:
 
-        if (isotropic_scatter(ray, &rec, attenuation, &scattered, &pdf_value))
+        if (isotropic_scatter(ray, &rec, &srec))
         {
+
+            // That means we have a valid global variable struct Hittable *g_lights.
+            assert(g_lights != NULL);
+
+            // Light sampling
+            struct PDF light_pdf = {.which = Hittable_PDF,
+                                    .pdf.hittable_pdf = (struct Hittable_PDF){.objects = g_lights}};
+            memcpy(light_pdf.pdf.hittable_pdf.origin, rec.p, 3 * sizeof(double));
+
+            // Uniform sampling of the surface of the unit sphere (srec.pdf_ptr)
+            struct Mixture_PDF mix_pdf = {.p = {&light_pdf, srec.pdf_ptr}};
+
+            memcpy(scattered.origin, rec.p, 3 * sizeof(double));
+            mixture_pdf_generate(&mix_pdf, scattered.direction);
+            scattered.tm = ray->tm;
+
+            pdf_value = mixture_pdf_value(&mix_pdf, scattered.direction);
+
+            // free pdf_ptr
+            free_pdf_ptr(srec.pdf_ptr);
+
             double scattering_pdf = isotropic_scattering_pdf(ray, &rec, &scattered);
             ray_color(color, &scattered, depth - 1, world, cfg);
-            multiply(color, attenuation, color);
+            multiply(color, srec.attenuation, color);
             scale(color, color, (scattering_pdf / pdf_value));
             return;
         }
