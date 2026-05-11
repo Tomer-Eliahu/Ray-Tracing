@@ -4,6 +4,7 @@
 #include "hittable.h"
 #include "hittable_list.h"
 #include "aabb.h"
+#include "onb.h"
 
 struct Material_Cfg;
 
@@ -138,4 +139,88 @@ bool sphere_hit(const struct Sphere *sphere, const struct Ray *ray, struct Inter
     rec->mat_cfg = (struct Material_Cfg *)sphere->mat_cfg;
 
     return true;
+}
+
+/// @brief Compute the pdf value of a sample according to the sphere sampling PDF in book 3 section 12.3.
+/// Used to importance sample a glass sphere or an otherwise important sphere
+/// (similar to how we like to light sample quad lights or other quads that we think are important).
+/// @remark **This method only works for stationary spheres**.
+/// @param sphere The glass sphere.
+/// @param origin The hit point of the ray with the non-light (here non glass-sphere) object.
+/// @param direction A direction going from origin towards the glass sphere (the sample).
+/// @remark Recall we are uniformly sampling the "visible cap" of the sphere from some point outside the sphere.
+double sphere_pdf_value(const struct Sphere *sphere, const point3 origin, const vec3 direction)
+{
+    struct Hit_Record rec;
+    struct Ray r;
+    memcpy(r.origin, origin, sizeof(double) * 3);
+    memcpy(r.direction, direction, sizeof(double) * 3);
+
+    if (!sphere_hit(sphere, &r, (struct Interval){.min = 0.001, .max = infinity}, &rec))
+        return 0;
+
+    vec3 temp;
+    // (center.at(0) - origin).length_squared();
+    double dist_squared = len_squared(
+        subtract(temp, ray_at(temp, &sphere->center, 0.0), (double *)origin));
+
+    double cos_theta_max = sqrt(1 - (sphere->radius * sphere->radius / dist_squared));
+    double solid_angle = 2 * pi * (1 - cos_theta_max);
+
+    return 1.0 / solid_angle;
+}
+
+/// @brief Generates the sample values for the sphere sampling PDF in Book 3: Section 12.3.
+/// That is from two uniform random r1,r2 on [0,1] finds a uniform point on the "visible cap" of the sphere.
+/// The "visible cap" is what some point outside the sphere, call it P, sees of the sphere.
+/// @param radius
+/// @param distance_squared the distance between P and the sphere center C squared.
+/// @return
+static double *random_to_sphere(double radius, double distance_squared, vec3 ret)
+{
+
+    double r1 = random_zero_to_one();
+    double r2 = random_zero_to_one();
+    double z = 1 + r2 * (sqrt(1 - (radius * radius / distance_squared)) - 1);
+
+    double phi = 2 * pi * r1;
+    double x = cos(phi) * sqrt(1 - z * z);
+    double y = sin(phi) * sqrt(1 - z * z);
+
+    ret[0] = x;
+    ret[1] = y;
+    ret[2] = z;
+
+    return ret;
+}
+
+/// @brief Generate a random sample (a direction from a non-glass sphere object towards the glass sphere) -
+/// accroding to the sphere sampling PDF in Book 3 section 12.3.
+/// Used to importance sample a glass sphere or an otherwise important sphere
+/// (similar to how we like to light sample quad lights or other quads that we think are important).
+/// @remark Recall we are uniformly sampling the "visible cap" of the sphere from some point outside the sphere.
+/// And we return said point - origin.
+/// @remark **This method only works for stationary spheres**.
+/// @param sphere The glass sphere (or some other sphere we want to sample towards).
+/// @param origin Would usually be the hit point (rec.p) of the ray with the non-glass sphere object.
+double *sphere_random(const struct Sphere *sphere, const point3 origin, vec3 ret)
+{
+
+    vec3 direction;
+    subtract(direction, ray_at(direction, &sphere->center, 0.0), (double *)origin);
+
+    double distance_squared = len_squared(direction);
+    struct ONB uvw;
+    init_onb(&uvw, direction);
+
+    /*
+    What is happening here is this:
+    the directions of the rays hitting the visible cap of the glass sphere (from some point P outside the sphere)
+    basically correspond to a cone and said cone also corresponds to a solid angle from the ray's origin (P).
+    And we previously figured out how to sample solid angles.
+    So we sample a solid angle where direction is the normal, and transform that back into our scene
+    coordinates.
+    */
+
+    return onb_transform(ret, &uvw, random_to_sphere(sphere->radius, distance_squared, ret));
 }

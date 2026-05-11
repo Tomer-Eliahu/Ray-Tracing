@@ -286,7 +286,7 @@ bool isotropic_scatter([[maybe_unused]] const struct Ray *r_in, const struct Hit
 {
     tex_value(srec->attenuation, rec->mat_cfg->object.isotropic.tex, rec->u, rec->v, rec->p);
     srec->pdf_ptr = new_pdf_ptr();
-    *(srec->pdf_ptr) = (struct PDF){.which = Sphere_PDF};
+    *(srec->pdf_ptr) = (struct PDF){.which = Uniform_Sphere_PDF};
     srec->skip_pdf = false;
     return true;
 }

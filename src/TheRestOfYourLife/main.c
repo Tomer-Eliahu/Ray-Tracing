@@ -637,29 +637,47 @@ void cornell_box()
         quad_init(&world[i].object.quad);
     }
 
-    const struct Material_Cfg aluminum = {.which = Metal,
-                                          .object.metal = {.albedo = {0.8, 0.85, 0.88}, .fuzz = 0.0}};
+    // const struct Material_Cfg aluminum = {.which = Metal,
+    //                                       .object.metal = {.albedo = {0.8, 0.85, 0.88}, .fuzz = 0.0}};
 
     struct Hittable *box1 = world_add_box_rotated_translated((point3){0, 0, 0}, (point3){165, 330, 165},
-                                                             &aluminum,
+                                                             &white_mat,
                                                              (vec3){265, 0, 295}, 15);
 
     // Copy box1 (just the final 6 quads post operations) into world
     memcpy(&world[actual_world_len], &box1[12], sizeof(struct Hittable) * 6);
     actual_world_len += 6;
 
-    struct Hittable *box2 = world_add_box_rotated_translated((point3){0, 0, 0}, (point3){165, 165, 165},
-                                                             &white_mat,
-                                                             (vec3){130, 0, 65}, -18);
+    // struct Hittable *box2 = world_add_box_rotated_translated((point3){0, 0, 0}, (point3){165, 165, 165},
+    //                                                          &white_mat,
+    //                                                          (vec3){130, 0, 65}, -18);
 
-    // Copy box2 (just the final 6 quads post operations) into world
-    memcpy(&world[actual_world_len], &box2[12], sizeof(struct Hittable) * 6);
-    actual_world_len += 6;
+    // // Copy box2 (just the final 6 quads post operations) into world
+    // memcpy(&world[actual_world_len], &box2[12], sizeof(struct Hittable) * 6);
+    // actual_world_len += 6;
 
-    // Light Sources (Note these *ARE* already in the scene and properly initialized)
+    // Glass Sphere
+    const struct Material_Cfg glass_material =
+        {.which = Dielectric, .object.dielectric.refraction_index = 1.5};
+
+    world[actual_world_len] =
+        (struct Hittable){.which = (enum Which_Hittable)Sphere,
+                          .object.sphere =
+                              {.center =
+                                   (struct Ray){.origin = {190, 90, 190}, .direction = {0}},
+                               .radius = 90,
+                               .mat_cfg = &glass_material}};
+
+    int glass_sphere_idx = actual_world_len;
+    // Static Sphere
+    sphere_static_bound(&world[actual_world_len].object.sphere);
+    actual_world_len++;
+
+    // Light Sources (OR just important things we would like to sample towards)
+    // (Note these *ARE* already in the scene and properly initialized)
     // We can avoid the book's approach of making and properly initializing duplicates here
     // as we only have 1 light source so far.
-    g_lights = &world[2];
+    g_lights = &world[glass_sphere_idx];
 
     // We rely on the OS to cleanup the malloced memory
     // as we need it for the rest of the program's duration anyhow.

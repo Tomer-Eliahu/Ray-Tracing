@@ -17,13 +17,13 @@ double *pdf_generate(const struct PDF *gen_pdf, vec3 ret);
 
 /// @brief Returns the sampling_pdf value for the sample direction.
 /// The sampling pdf is uniform sampling over the unit sphere.
-double sphere_pdf_value([[maybe_unused]] const vec3 dir)
+double uniform_sphere_pdf_value([[maybe_unused]] const vec3 dir)
 {
     return 1.0 / (4.0 * pi);
 }
 
 /// @brief Returns a sample according to a uniform distribution on the surface of the unit sphere.
-double *sphere_pdf_generate(vec3 ret)
+double *uniform_sphere_pdf_generate(vec3 ret)
 {
     random_unit_vector(ret);
     return ret;
@@ -61,7 +61,7 @@ double *cos_density_generate(const struct Cos_Density *cos_den, vec3 ret)
     return onb_transform(ret, &cos_den->onb, rand_vec);
 }
 
-/// @brief Sample directions towards a hittable, like the light.
+/// @brief Sample directions towards a hittable, like the light, or a glass sphere (towards something important).
 struct Hittable_PDF
 {
     struct Hittable *objects; //< The hittable objects (can be more than 1 if you use struct Composite_Hittable).
@@ -87,6 +87,11 @@ hittable_pdf_value(const struct Hittable_PDF *hit_pdf, const vec3 direction)
         return quad_pdf_value(&hit_pdf->objects->object.quad, hit_pdf->origin, direction);
         break;
 
+    case (enum Which_Hittable)Sphere:
+
+        return sphere_pdf_value(&hit_pdf->objects->object.sphere, hit_pdf->origin, direction);
+        break;
+
     default:
 
         return 0.0;
@@ -103,6 +108,11 @@ double *hittable_pdf_generate(const struct Hittable_PDF *hit_pdf, vec3 ret)
     case (enum Which_Hittable)Quad:
 
         return quad_random(&hit_pdf->objects->object.quad, hit_pdf->origin, ret);
+        break;
+
+    case (enum Which_Hittable)Sphere:
+
+        return sphere_random(&hit_pdf->objects->object.sphere, hit_pdf->origin, ret);
         break;
 
     default:
@@ -141,7 +151,7 @@ double *mixture_pdf_generate(const struct Mixture_PDF *mix_pdf, vec3 ret)
 
 enum Which_PDF
 {
-    Sphere_PDF,
+    Uniform_Sphere_PDF,
     Cos_Density,
     Hittable_PDF,
     Mixture_PDF,
@@ -167,9 +177,9 @@ double pdf_value(const struct PDF *gen_pdf, const vec3 direction)
 {
     switch (gen_pdf->which)
     {
-    case (enum Which_PDF)Sphere_PDF:
+    case (enum Which_PDF)Uniform_Sphere_PDF:
 
-        return sphere_pdf_value(direction);
+        return uniform_sphere_pdf_value(direction);
         break;
 
     case (enum Which_PDF)Cos_Density:
@@ -201,9 +211,9 @@ double *pdf_generate(const struct PDF *gen_pdf, vec3 ret)
 
     switch (gen_pdf->which)
     {
-    case (enum Which_PDF)Sphere_PDF:
+    case (enum Which_PDF)Uniform_Sphere_PDF:
 
-        return sphere_pdf_generate(ret);
+        return uniform_sphere_pdf_generate(ret);
         break;
 
     case (enum Which_PDF)Cos_Density:
@@ -254,7 +264,7 @@ void free_pdf_ptr(struct PDF *p)
 
     switch (p->which)
     {
-    case (enum Which_PDF)Sphere_PDF:
+    case (enum Which_PDF)Uniform_Sphere_PDF:
         // has no associated struct.
         free(p);
         return;
