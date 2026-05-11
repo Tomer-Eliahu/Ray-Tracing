@@ -142,6 +142,7 @@ and is becoming increasingly common in realtime.
 
 // We do light sampling
 struct Hittable *g_lights = nullptr;
+int g_lights_size = 0;
 
 ///@brief Sets the color for a given scene ray.
 ///@param color This color will be set by this function.
@@ -181,6 +182,7 @@ void ray_color(color3 color, const struct Ray *ray, int depth,
         {
             // That means we have a valid global variable struct Hittable *g_lights.
             assert(g_lights != NULL);
+            assert(g_lights_size > 0);
 
             // Sample according to a mixture density of the cosine sampling and of the light sampling.
             // Doing importance sampling like so (we aim that our mixture pdf closely approximates f
@@ -191,7 +193,8 @@ void ray_color(color3 color, const struct Ray *ray, int depth,
 
             // Light sampling
             struct PDF light_pdf = {.which = Hittable_PDF,
-                                    .pdf.hittable_pdf = (struct Hittable_PDF){.objects = g_lights}};
+                                    .pdf.hittable_pdf = (struct Hittable_PDF){.objects = g_lights,
+                                                                              .size = g_lights_size}};
             memcpy(light_pdf.pdf.hittable_pdf.origin, rec.p, 3 * sizeof(double));
 
             // Cosine sampling (srec.pdf_ptr)
@@ -275,10 +278,12 @@ void ray_color(color3 color, const struct Ray *ray, int depth,
 
             // That means we have a valid global variable struct Hittable *g_lights.
             assert(g_lights != NULL);
+            assert(g_lights_size > 0);
 
             // Light sampling
             struct PDF light_pdf = {.which = Hittable_PDF,
-                                    .pdf.hittable_pdf = (struct Hittable_PDF){.objects = g_lights}};
+                                    .pdf.hittable_pdf = (struct Hittable_PDF){.objects = g_lights,
+                                                                              .size = g_lights_size}};
             memcpy(light_pdf.pdf.hittable_pdf.origin, rec.p, 3 * sizeof(double));
 
             // Uniform sampling of the surface of the unit sphere (srec.pdf_ptr)

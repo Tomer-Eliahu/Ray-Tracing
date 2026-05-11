@@ -670,14 +670,15 @@ void cornell_box()
 
     int glass_sphere_idx = actual_world_len;
     // Static Sphere
-    sphere_static_bound(&world[actual_world_len].object.sphere);
+    sphere_static_bound(&world[glass_sphere_idx].object.sphere);
     actual_world_len++;
 
     // Light Sources (OR just important things we would like to sample towards)
     // (Note these *ARE* already in the scene and properly initialized)
-    // We can avoid the book's approach of making and properly initializing duplicates here
-    // as we only have 1 light source so far.
-    g_lights = &world[glass_sphere_idx];
+    g_lights_size = 2;
+    g_lights = malloc(sizeof(struct Hittable) * g_lights_size);
+    g_lights[0] = world[2]; // The ceiling light
+    g_lights[1] = world[glass_sphere_idx];
 
     // We rely on the OS to cleanup the malloced memory
     // as we need it for the rest of the program's duration anyhow.

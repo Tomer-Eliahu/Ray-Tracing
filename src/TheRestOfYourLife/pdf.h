@@ -64,7 +64,12 @@ double *cos_density_generate(const struct Cos_Density *cos_den, vec3 ret)
 /// @brief Sample directions towards a hittable, like the light, or a glass sphere (towards something important).
 struct Hittable_PDF
 {
-    struct Hittable *objects; //< The hittable objects (can be more than 1 if you use struct Composite_Hittable).
+    /// @brief The hittable objects (can be more than 1 if you use a **malloced array**).
+    /// Make sure each hittable is **properly initialized** and is the object you want to sample towards.
+    /// That means you are probably not going to be using Hittables that are Composite_Hittable most of the time
+    /// but rather are things like Quads and Spheres.
+    struct Hittable *objects;
+    int size; //< The number of hittable objects.
     point3 origin;
 };
 
@@ -80,39 +85,53 @@ you'll need to implement the above functions for the corresponding Hittables.
 double
 hittable_pdf_value(const struct Hittable_PDF *hit_pdf, const vec3 direction)
 {
-    switch (hit_pdf->objects->which)
+    // Calculate according to the Mixture PDF value if we have multiple objects.
+    double weight = 1.0 / hit_pdf->size;
+    double sum = 0.0;
+
+    for (int i = 0; i < hit_pdf->size; i++)
     {
-    case (enum Which_Hittable)Quad:
+        switch (hit_pdf->objects[i].which)
+        {
+        case (enum Which_Hittable)Quad:
 
-        return quad_pdf_value(&hit_pdf->objects->object.quad, hit_pdf->origin, direction);
-        break;
+            sum += weight * quad_pdf_value(&hit_pdf->objects[i].object.quad, hit_pdf->origin, direction);
+            break;
 
-    case (enum Which_Hittable)Sphere:
+        case (enum Which_Hittable)Sphere:
 
-        return sphere_pdf_value(&hit_pdf->objects->object.sphere, hit_pdf->origin, direction);
-        break;
+            sum += weight * sphere_pdf_value(&hit_pdf->objects[i].object.sphere, hit_pdf->origin, direction);
+            break;
 
-    default:
+        default:
 
-        return 0.0;
-        break;
+            fprintf(stderr, "Not a valid Which_Hittable kind in hittable_pdf_value!\n");
+            fflush(stderr);
+            exit(EXIT_FAILURE);
+            break;
+        }
     }
+
+    return sum;
 }
 
 double *hittable_pdf_generate(const struct Hittable_PDF *hit_pdf, vec3 ret)
 {
     // In the book this is return objects.random(origin);
 
-    switch (hit_pdf->objects->which)
+    // If we have multiple objects generate according to their Mixture PDF
+    int index = random_int(0, hit_pdf->size - 1);
+
+    switch (hit_pdf->objects[index].which)
     {
     case (enum Which_Hittable)Quad:
 
-        return quad_random(&hit_pdf->objects->object.quad, hit_pdf->origin, ret);
+        return quad_random(&hit_pdf->objects[index].object.quad, hit_pdf->origin, ret);
         break;
 
     case (enum Which_Hittable)Sphere:
 
-        return sphere_random(&hit_pdf->objects->object.sphere, hit_pdf->origin, ret);
+        return sphere_random(&hit_pdf->objects[index].object.sphere, hit_pdf->origin, ret);
         break;
 
     default:
