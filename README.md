@@ -62,3 +62,10 @@ to be involved in this field professionally:
 <p align="center">
   Book 3: Cornell box with mixture density sampling pdf
 </p>
+
+<p align="center">
+  <img src="images\51_Book_three_final_render_Cornell_box_sampling_towards_light_and_glass_sphere.png" alt="Book 3: Final Render: Cornell box with sampling towards light and glass sphere"/>
+</p>
+<p align="center">
+  Book 3: Final Render: Cornell box with sampling towards light and glass sphere
+</p>

@@ -37,6 +37,15 @@ void write_color(color3 color)
     double g = color[1];
     double b = color[2];
 
+    // Replace NaN components with zero
+    // (side note: this is not needed due to linear_to_gamma being called).
+    if (r != r)
+        r = 0.0;
+    if (g != g)
+        g = 0.0;
+    if (b != b)
+        b = 0.0;
+
     // Apply a linear to gamma transform for gamma 2
     r = linear_to_gamma(r);
     g = linear_to_gamma(g);
