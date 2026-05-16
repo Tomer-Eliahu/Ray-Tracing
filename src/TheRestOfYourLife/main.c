@@ -673,8 +673,9 @@ void cornell_box()
     sphere_static_bound(&world[glass_sphere_idx].object.sphere);
     actual_world_len++;
 
-    // Light Sources (OR just important things we would like to sample towards)
-    // (Note these *ARE* already in the scene and properly initialized)
+    // Light Sources OR just important things (like "proxy" light sources such as a glass sphere)
+    // we would like to sample towards.
+    // Note these *ARE* already in the scene and properly initialized.
     g_lights_size = 2;
     g_lights = malloc(sizeof(struct Hittable) * g_lights_size);
     g_lights[0] = world[2]; // The ceiling light

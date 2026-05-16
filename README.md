@@ -39,7 +39,7 @@ Thus in the final book, a focus is placed on improving rendering performance and
 * Covered how to generate samples according to an arbitrary PDF (probability density function) using the building blocks of uniformly distributed random variables. 
 * Covered Monte-Carlo Integration.
 * Implemented importance sampling to converge to the correct, unbiased, image faster (with fewer samples) via generating *good* rays (towards important things like lights). This included light sampling and mixture density PDFs. 
-* Later implemented sampling towards *multiple* different important things (like a light and a glass sphere).
+* Later implemented sampling towards *multiple* different important things (like a light and a glass sphere which is a "proxy" light source).
 
 
 ## How to view the rendered images
